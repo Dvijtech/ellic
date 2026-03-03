@@ -1,18 +1,30 @@
 #include <Arduino.h>
+#include "config.h"
+#include "joystick.h"
+#include "motor.h"
+#include "state_machine.h"
 
-// put function declarations here:
-int myFunction(int, int);
+// ===== Global parameters =====
+int MaxPower = 60;
+int RampStep = 2;
+int Deadzone = 30;
+int Mode = 0;
+
+unsigned long lastUpdate = 0;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+    Serial.begin(115200);
+
+    joystickInit();
+    motorInit();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+    if (millis() - lastUpdate >= LOOP_PERIOD_MS) {
+        lastUpdate = millis();
+
+        Zone zone = readJoystick();
+        updateState(zone);
+    }
 }
