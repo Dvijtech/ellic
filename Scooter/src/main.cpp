@@ -11,10 +11,14 @@ int Deadzone = 30;
 int Mode = 0;
 
 unsigned long lastUpdate = 0;
+unsigned long bootTime = 0;
 
 void setup() {
     Serial.begin(115200);
+    bootTime = millis(); // добавили загрузочное время чтобы не пускались моторы сразу
+
     analogSetPinAttenuation(PIN_JOYSTICK_X, ADC_11db); // Настройка АЦП для джойстика (полный диапазон 0–3.3В)
+    
     joystickInit();
     motorInit();
 }
@@ -23,6 +27,12 @@ void loop() {
 
     Serial.println(analogRead(PIN_JOYSTICK_X));
     delay(200);
+
+    if (millis() - bootTime < 500) { 
+        setLeftMotor(0);
+        setRightMotor(0);
+        return;
+    }
 
     if (millis() - lastUpdate >= LOOP_PERIOD_MS) {
         lastUpdate = millis();
