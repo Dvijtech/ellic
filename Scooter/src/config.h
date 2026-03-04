@@ -1,14 +1,11 @@
 #pragma once
 
 // ===== Pins =====
-#define PIN_JOYSTICK_X 34
+#define PIN_JOYSTICK_X      34
+#define PIN_JOYSTICK_BUTTON 4
 
-#define PIN_PWM_LEFT   16
-#define PIN_PWM_RIGHT  17          
-
-// пока убрал пины направления 
-// #define PIN_DIR_LEFT   27 
-// #define PIN_DIR_RIGHT  14
+#define PIN_PWM_LEFT        16
+#define PIN_PWM_RIGHT        17
 
 // ===== PWM config =====
 #define PWM_FREQ       1000

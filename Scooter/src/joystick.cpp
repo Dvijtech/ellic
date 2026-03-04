@@ -4,6 +4,10 @@
 
 static int center = 2048;
 
+static int lastButtonState = HIGH;
+static unsigned long lastDebounceTime = 0; // добавляли с кнопкой надеюсь нигде не конфликтанет
+const unsigned long debounceDelay = 50; // добавляли с кнопкой надеюсь нигде не конфликтанет
+
 void joystickInit() {
     pinMode(PIN_JOYSTICK_X, INPUT);
 
@@ -34,4 +38,28 @@ Zone readJoystick() {
         return ZONE_RIGHT;
 
     return ZONE_DEAD;
+}
+
+void joystickButtonInit() {
+    pinMode(PIN_JOYSTICK_BUTTON, INPUT_PULLUP);
+    lastButtonState = digitalRead(PIN_JOYSTICK_BUTTON);
+}
+
+bool isJoystickButtonPressed() {
+    int reading = digitalRead(PIN_JOYSTICK_BUTTON);
+    
+    // антидребезг
+    if (reading != lastButtonState) {
+        lastDebounceTime = millis();
+    }
+    
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+        if (reading == LOW) { // нажатие (активный низкий уровень)
+            lastButtonState = reading;
+            return true;
+        }
+    }
+    
+    lastButtonState = reading;
+    return false;
 }

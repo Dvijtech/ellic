@@ -3,6 +3,7 @@
 #include "joystick.h"
 #include "motor.h"
 #include "state_machine.h"
+#include "ble_keyboard.h"
 
 // ===== Global parameters =====
 int MaxPower = 60;
@@ -32,7 +33,13 @@ void setup() {
     analogSetPinAttenuation(PIN_JOYSTICK_X, ADC_11db);
 
     joystickInit();
+ 
     motorInit();   // motorInit продублирует настройку PWM, но это безопасно
+    
+    
+    joystickButtonInit();  // добавляем кнопку
+    initBLEKeyboard();       // добавляем клавиатуру блютус БЛЕ
+
 }
 
 void loop() {
@@ -64,4 +71,16 @@ void loop() {
         setRightMotor(0);
         return;
     }
+    // Обработка кнопки джойстика (неблокирующая)
+    static bool lastButtonWasPressed = false;
+    if (isJoystickButtonPressed()) {
+        if (!lastButtonWasPressed) {
+            // Отправляем символ 'c' по Bluetooth
+            sendKeyPress('c');
+            lastButtonWasPressed = true;
+        }
+    } else {
+        lastButtonWasPressed = false;
+    }   
+    
 }
