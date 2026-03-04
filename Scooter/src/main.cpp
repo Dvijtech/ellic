@@ -18,12 +18,12 @@ bool systemArmed = false;
 void setup() {
   
     pinMode(PIN_PWM_LEFT, OUTPUT);
-    digitalWrite(PIN_PWM_LEFT, LOW);
-
     pinMode(PIN_PWM_RIGHT, OUTPUT);
+    
+    digitalWrite(PIN_PWM_LEFT, LOW);
     digitalWrite(PIN_PWM_RIGHT, LOW);
 
-    delay(50);
+    delay(300);
 
     // Теперь остальная инициализация
     Serial.begin(115200);
