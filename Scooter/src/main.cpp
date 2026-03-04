@@ -13,14 +13,26 @@ int Mode = 0;
 unsigned long lastUpdate = 0;
 unsigned long bootTime = 0;
 
-void setup() {
-    Serial.begin(115200);
-    bootTime = millis(); // добавили загрузочное время чтобы не пускались моторы сразу
+bool systemArmed = false;
 
-    analogSetPinAttenuation(PIN_JOYSTICK_X, ADC_11db); // Настройка АЦП для джойстика (полный диапазон 0–3.3В)
-    
+void setup() {
+  
+    pinMode(PIN_PWM_LEFT, OUTPUT);
+    digitalWrite(PIN_PWM_LEFT, LOW);
+
+    pinMode(PIN_PWM_RIGHT, OUTPUT);
+    digitalWrite(PIN_PWM_RIGHT, LOW);
+
+    delay(50);
+
+    // Теперь остальная инициализация
+    Serial.begin(115200);
+    bootTime = millis();
+
+    analogSetPinAttenuation(PIN_JOYSTICK_X, ADC_11db);
+
     joystickInit();
-    motorInit();
+    motorInit();   // motorInit продублирует настройку PWM, но это безопасно
 }
 
 void loop() {
@@ -39,5 +51,17 @@ void loop() {
 
         Zone zone = readJoystick();
         updateState(zone);
+    }
+    if (!systemArmed) {
+        Zone zone = readJoystick();
+
+        // Разрешаем движение только если джойстик в центре
+        if (zone == ZONE_DEAD) {
+            systemArmed = true;
+        }
+
+        setLeftMotor(0);
+        setRightMotor(0);
+        return;
     }
 }

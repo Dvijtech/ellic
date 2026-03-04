@@ -3,15 +3,15 @@
 // ===== Pins =====
 #define PIN_JOYSTICK_X 34
 
-#define PIN_PWM_LEFT   25
-#define PIN_PWM_RIGHT  26
+#define PIN_PWM_LEFT   16
+#define PIN_PWM_RIGHT  17          
 
 // пока убрал пины направления 
 // #define PIN_DIR_LEFT   27 
 // #define PIN_DIR_RIGHT  14
 
 // ===== PWM config =====
-#define PWM_FREQ       20000
+#define PWM_FREQ       1000
 #define PWM_RESOLUTION 8
 #define PWM_MAX        255
 
