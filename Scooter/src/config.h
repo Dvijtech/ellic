@@ -4,8 +4,8 @@
 #define PIN_JOYSTICK_X      34
 #define PIN_JOYSTICK_BUTTON 4
 
-#define PIN_PWM_LEFT        16
-#define PIN_PWM_RIGHT        17
+#define PIN_PWM_LEFT        17
+#define PIN_PWM_RIGHT        16
 
 // ===== PWM config =====
 #define PWM_FREQ       1000

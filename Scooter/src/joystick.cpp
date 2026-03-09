@@ -7,6 +7,10 @@ static int center = 2048;
 static int lastButtonState = HIGH;
 static unsigned long lastDebounceTime = 0; // добавляли с кнопкой надеюсь нигде не конфликтанет
 const unsigned long debounceDelay = 50; // добавляли с кнопкой надеюсь нигде не конфликтанет
+void joystickButtonInit() {
+    pinMode(PIN_JOYSTICK_BUTTON, INPUT_PULLUP);
+    Serial.println("Кнопка джойстика инициализирована");
+}
 
 void joystickInit() {
     pinMode(PIN_JOYSTICK_X, INPUT);
@@ -40,26 +44,29 @@ Zone readJoystick() {
     return ZONE_DEAD;
 }
 
-void joystickButtonInit() {
-    pinMode(PIN_JOYSTICK_BUTTON, INPUT_PULLUP);
-    lastButtonState = digitalRead(PIN_JOYSTICK_BUTTON);
-}
-
 bool isJoystickButtonPressed() {
-    int reading = digitalRead(PIN_JOYSTICK_BUTTON);
+    static int lastState = HIGH;
+    static unsigned long lastChangeTime = 0;
+    static bool pressReported = false;
     
-    // антидребезг
-    if (reading != lastButtonState) {
-        lastDebounceTime = millis();
+    int currentState = digitalRead(PIN_JOYSTICK_BUTTON);
+    unsigned long now = millis();
+    
+    if (currentState != lastState) {
+        lastChangeTime = now;
+        lastState = currentState;
     }
     
-    if ((millis() - lastDebounceTime) > debounceDelay) {
-        if (reading == LOW) { // нажатие (активный низкий уровень)
-            lastButtonState = reading;
+    if ((now - lastChangeTime) > 50) {  // Стабильно 50 мс
+        if (currentState == LOW && !pressReported) {
+            pressReported = true;
             return true;
+        }
+        if (currentState == HIGH) {
+            pressReported = false;
         }
     }
     
-    lastButtonState = reading;
     return false;
 }
+

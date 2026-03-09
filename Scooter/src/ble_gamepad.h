@@ -3,9 +3,10 @@
 
 #include <BleGamepad.h>
 
-// Объявляем внешнюю переменную, чтобы её можно было использовать в других файлах
+// Объявляем внешнюю переменную
 extern BleGamepad bleGamepad;
 
+// Объявляем функции
 void initBLEGamepad();
 void sendGamepadButtonPress();
 

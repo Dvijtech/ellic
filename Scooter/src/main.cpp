@@ -6,8 +6,8 @@
 #include "ble_gamepad.h"  // НОВОЕ: подключаем наш геймпад
 
 // ===== Global parameters =====
-int MaxPower = 60;
-int RampStep = 2;
+int MaxPower = 45;
+int RampStep = 6;
 int Deadzone = 30;
 int Mode = 0;
 
@@ -16,8 +16,7 @@ unsigned long bootTime = 0;
 
 bool systemArmed = false;
 
-void setup() {
-  
+void setup() {  // Запускаем BLE на втором ядре
     pinMode(PIN_PWM_LEFT, OUTPUT);
     pinMode(PIN_PWM_RIGHT, OUTPUT);
     
@@ -41,8 +40,8 @@ void setup() {
     initBLEGamepad();        // добавляем клавиатуру блютус БЛЕ
 
 }
-
 void loop() {
+    delay(1);
 
     Serial.println(analogRead(PIN_JOYSTICK_X));
     delay(200);
@@ -59,6 +58,7 @@ void loop() {
         Zone zone = readJoystick();
         updateState(zone);
     }
+    
     if (!systemArmed) {
         Zone zone = readJoystick();
 
@@ -69,18 +69,13 @@ void loop() {
 
         setLeftMotor(0);
         setRightMotor(0);
-        return;
+        return;  // ← ВАЖНО: здесь return, поэтому код после if НЕ ВЫПОЛНЯЕТСЯ
     }
-    // Обработка кнопки джойстика (неблокирующая)
-    static bool lastButtonWasPressed = false;
-    if (isJoystickButtonPressed()) {
-        if (!lastButtonWasPressed) {
-            Serial.println("Кнопка нажата - отправляем сигнал выстрела");
-            sendGamepadButtonPress();  // Отправляем нажатие кнопки геймпада
-            lastButtonWasPressed = true;
-        }
-    } else {
-        lastButtonWasPressed = false;
-    }  
     
+    // Обработка кнопки - теперь надёжно!
+    if (isJoystickButtonPressed()) {
+        Serial.println("Кнопка нажата!");
+        sendGamepadButtonPress();
+    }
+
 }
