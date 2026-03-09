@@ -3,7 +3,7 @@
 #include "joystick.h"
 #include "motor.h"
 #include "state_machine.h"
-#include "ble_keyboard.h"
+#include "ble_gamepad.h"  // НОВОЕ: подключаем наш геймпад
 
 // ===== Global parameters =====
 int MaxPower = 60;
@@ -38,7 +38,7 @@ void setup() {
     
     
     joystickButtonInit();  // добавляем кнопку
-    initBLEKeyboard();       // добавляем клавиатуру блютус БЛЕ
+    initBLEGamepad();        // добавляем клавиатуру блютус БЛЕ
 
 }
 
@@ -75,12 +75,12 @@ void loop() {
     static bool lastButtonWasPressed = false;
     if (isJoystickButtonPressed()) {
         if (!lastButtonWasPressed) {
-            // Отправляем символ 'c' по Bluetooth
-            sendKeyPress('c');
+            Serial.println("Кнопка нажата - отправляем сигнал выстрела");
+            sendGamepadButtonPress();  // Отправляем нажатие кнопки геймпада
             lastButtonWasPressed = true;
         }
     } else {
         lastButtonWasPressed = false;
-    }   
+    }  
     
 }

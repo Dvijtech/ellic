@@ -11,4 +11,4 @@ void joystickInit();
 void joystickButtonInit();          // новая функция
 bool isJoystickButtonPressed();     // новая функция
 
-Zone readJoystick();
+Zone readJoystick();    
