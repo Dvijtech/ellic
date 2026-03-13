@@ -47,7 +47,7 @@ Potential applications:
 
 ## VR robot experiment
 
-![VR robot](CHEMP\ChempVR.gif)
+![VR robot](CHEMP/ChempVR.gif)
 
 
 ## Video
