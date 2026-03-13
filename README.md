@@ -1,20 +1,13 @@
-# ellic
-
-
+# ELLIC
+Research open platform of locomotion Эллипс - велик - эллик
+The project explores modern walking mechanisms for robomobility devices, mechs and rehabilitation technologies.
 
 Goal:
-develop experimental locomotion mechanisms
-for robotics and mobility research.
+develop usable locomotion mechanisms
+for people and mobility activities.
 
 Current prototype:
 elliptical walking scooter mechanism.
-
-
-# ELLIC
-Research open platform of locomotion Эллипс - велик - эллик
-
-
-The project explores modern walking mechanisms for robomobility devices? mechs and rehabilitation technologies.
 
 ## Demo
 
