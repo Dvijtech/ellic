@@ -11,7 +11,7 @@ elliptical walking scooter mechanism.
 
 ## Demo
 
-![ELLIC mechanism](media\Luka_right_view.gif)
+![ELLIC mechanism](media/Luka_right_view.gif)
 
 
 ## Concept
