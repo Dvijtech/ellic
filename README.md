@@ -19,7 +19,7 @@ The project explores alternative walking mechanisms for robotics, mobility devic
 
 ## Demo
 
-![ELLIC mechanism](cad/Povorot_model_Solid2.gif)
+![ELLIC mechanism](media\Luka_right_view.gif)
 
 
 ## Concept
