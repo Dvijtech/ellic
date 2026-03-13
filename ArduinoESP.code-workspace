@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "Scooter",
+			"path": "Scooter"
+		},
+		{
+			"name": "ble gamepad",
+			"path": "../../Documents/PlatformIO/Projects/ble gamepad"
+		}
+	],
+	"settings": {}
+}

@@ -7,7 +7,7 @@
 
 // ===== Global parameters =====
 int MaxPower = 45;
-int RampStep = 6;
+int RampStep = 4;
 int Deadzone = 30;
 int Mode = 0;
 
@@ -23,7 +23,7 @@ void setup() {  // Запускаем BLE на втором ядре
     digitalWrite(PIN_PWM_LEFT, LOW);
     digitalWrite(PIN_PWM_RIGHT, LOW);
 
-    delay(300);
+    delay(250);
 
     // Теперь остальная инициализация
     Serial.begin(115200);

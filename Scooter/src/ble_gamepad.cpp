@@ -4,12 +4,12 @@
 #include <BleGamepad.h>
 
 // ОПРЕДЕЛЯЕМ переменную (здесь, без extern!)
-BleGamepad bleGamepad("ESP32 Project", "PICO Controller", 100);
+BleGamepad bleGamepad("Bluetooth gamepad", "Pico+ellic", 100);
 
 void initBLEGamepad() {
     Serial.println("Запуск BLE Gamepad...");
     bleGamepad.begin();
-    Serial.println("Геймпад запущен. Имя: PICO Controller");
+    Serial.println("Геймпад запущен. Имя: Bluetooth gamepad");
 }
 
 void sendGamepadButtonPress() {
