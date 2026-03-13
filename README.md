@@ -1,5 +1,5 @@
 # ellic
-Research open platform of locomotion
+
 
 
 Goal:
@@ -11,11 +11,10 @@ elliptical walking scooter mechanism.
 
 
 # ELLIC
-Experimental Locomotion Platform
+Research open platform of locomotion Эллипс - велик - эллик
 
-Open research platform for experimental locomotion mechanisms.
 
-The project explores alternative walking mechanisms for robotics, mobility devices and rehabilitation technologies.
+The project explores modern walking mechanisms for robomobility devices? mechs and rehabilitation technologies.
 
 ## Demo
 
