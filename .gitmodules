@@ -1,0 +1,3 @@
+[submodule "firmware/ESP32ELLIC"]
+	path = firmware/ESP32ELLIC
+	url = https://github.com/Dvijtech/ellic/tree/main/firmware
