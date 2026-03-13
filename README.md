@@ -40,6 +40,16 @@ Potential applications:
 
 ## ROS simulation
 
+![ROS simulation](ros/description/buttle.gif)
+
+## VR robot experiment
+
+![VR robot](CHEMP/ChempVR.gif)
+
+## Video
+
+[Watch experiment video](ros/description/video_2025-11-05_14-38-01.mp4)
+
 
 https://github.com/Dvijtech/ellic/blob/main/ros/description/buttle.gif
 
