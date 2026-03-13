@@ -35,7 +35,7 @@ Potential applications:
 
 ## VR simulation
 
-![VR simulation](vr/VRELLIC.gif)
+![VR simulation](\vr\VRELLIC.gif)
 
 
 ## ROS simulation
