@@ -41,13 +41,13 @@ Potential applications:
 ## ROS simulation
 
 ```markdown
-![ROS simulation](ros/description/buttle.gif)
+![ROS simulation].(ros/description/buttle.gif).
 
 
 
 ## VR robot experiment
 
-![VR robot](CHEMP/ChempVR.gif)
+![VR robot].(CHEMP/ChempVR.gif)
 
 
 ## Video
