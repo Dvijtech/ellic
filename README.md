@@ -119,7 +119,7 @@ Engineering teams design their own machines and strategies.
 
 A global mech sport league emerges.
 ---
-![не отразилось].(media/paren.gif)
+![не отразилось](media/paren.gif)
 ---
 
 # The Community
