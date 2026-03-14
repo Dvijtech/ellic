@@ -118,7 +118,8 @@ Engineering teams design their own machines and strategies.
 **5. Media Championship**
 
 A global mech sport league emerges.
-
+---
+![не отразилось].(media/paren.gif)
 ---
 
 # The Community
