@@ -90,6 +90,8 @@ The design aims to create a new category between:
 The result is a **human-piloted locomotion platform**.
 
 ---
+![не загрузилось](media\Povorot_model_Solid2.gif)
+---
 
 # The Long-Term Goal
 
@@ -219,7 +221,7 @@ Gettin one allows you to:
 - Save significant engineering time
 - test control immediately
 - develop XR competition concepts
-- bit mythology of the future sport.
+- bit mythology of the future sport
 
 ---
 # Your support to organize comunity competitions.
