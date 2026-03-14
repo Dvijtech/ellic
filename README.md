@@ -14,7 +14,7 @@ It combines mechanical locomotion, robotics, VR interaction, and competitive gam
 
 ---
 
-![не загрузилось](путь/к/изображению.jpg)
+![не загрузилось]([путь/к/изображению.jpg](media/Luka_right_view.gif)
 ---
 
 # The Vision
