@@ -90,7 +90,7 @@ The design aims to create a new category between:
 The result is a **human-piloted locomotion platform**.
 
 ---
-![не загрузилось](media\Povorot_model_Solid2.gif)
+![не загрузилось](media/Povorot_model_Solid2.gif)
 ---
 
 # The Long-Term Goal
