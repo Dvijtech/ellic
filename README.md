@@ -67,6 +67,8 @@ Our goal is simple:
 **let anyone build, improve, and compete.**
 
 ---
+![не загрузилось](main/media/VRELLIC.gif)
+---
 
 # The Current Prototype
 
