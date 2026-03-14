@@ -43,7 +43,7 @@ That is the long-term vision of the **Ellic MechSport League**.
 
 ---
 
-![не загрузилось](media/vrbot.gif)
+![не загрузилось](media/VRBOT.gif)
 
 ---
 
