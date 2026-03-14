@@ -222,7 +222,7 @@ Gettin one allows you to:
 - develop XR competition concepts
 - bit mythology of the future sport
 
-![не отразилось](docs/2023-02-03_Инструкция_эксплуатации_Ellic_Механика.docx)
+[не отразилось](docs/2023-02-03_Инструкция_эксплуатации_Ellic_Механика.docx)
 
 ---
 # Your support to organize comunity competitions.
