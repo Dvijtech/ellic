@@ -118,6 +118,7 @@ This repository is the starting point for a global builder community.
 
 You can participate as:
 
+* teams
 * engineer
 * roboticist
 * designer
