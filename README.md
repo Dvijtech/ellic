@@ -221,6 +221,7 @@ Gettin one allows you to:
 - test control immediately
 - develop XR competition concepts
 - bit mythology of the future sport
+- get in first Ellic Founding Teams
 
 📄 **[Manual](docs/2022-10-10_EN_Инструкция_эксплуатации_Ellic.pdf)**  
 📝 **[Инструкция на русском в WORD](docs/2023-02-03_Инструкция_эксплуатации_Ellic_Механика.docx)**  
