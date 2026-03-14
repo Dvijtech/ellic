@@ -42,7 +42,9 @@ And millions watch the evolution of a new sport.
 That is the long-term vision of the **Ellic MechSport League**.
 
 ---
+
 ![не загрузилось](media/vrbot.gif)
+
 ---
 
 # Why Open Source?
