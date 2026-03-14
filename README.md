@@ -14,6 +14,9 @@ It combines mechanical locomotion, robotics, VR interaction, and competitive gam
 
 ---
 
+![не загрузилось](путь/к/изображению.jpg)
+---
+
 # The Vision
 
 Imagine a new type of championship.
