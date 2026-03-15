@@ -1,258 +1,281 @@
 # ELLIC
 
-### Open Locomotion Platform & Future MechSport League
+### Open Locomotion Platform
 
-**Ellic** is an open research platform exploring a new class of human-scale locomotion mechanisms.
+**Ellic** is an open research platform exploring a new type of **human-scale locomotion machine**.
 
-Our long-term dream is ambitious:
+The project investigates an **elliptical walking mechanism** that allows a rider to move using a mechanical stepping trajectory instead of wheels.
 
-> Build a global **mech sport league** as exciting and profitable as Formula-style racing — powered by open robotics and human-piloted machines.
+Ellic sits somewhere between:
 
-The Ellic platform is the first step.
+- a scooter
+- a robotic walking machine
+- an experimental exoskeleton vehicle
 
-It combines mechanical locomotion, robotics, VR interaction, and competitive gameplay into a new form of sport and engineering culture.
-
----
-
-![не загрузилось](media/Luka_right_view.gif)
----
-
-# The Vision
-
-Imagine a new type of championship.
-
-Human pilots ride mechanical walking machines.
-
-Teams design their own vehicles based on a shared open platform.
-
-Matches happen in both **physical arenas and virtual environments**.
-
-Fans follow teams, players, and machines just like traditional motorsport.
-
-There are tournaments, leagues, and world cups.
-
-Collectors trade digital artifacts, machine skins, and historical cards of legendary matches.
-
-Sponsors support teams.
-
-Betting platforms analyze performance.
-
-And millions watch the evolution of a new sport.
-
-That is the long-term vision of the **Ellic MechSport League**.
+The goal is to create a **replicable open hardware locomotion platform** for robotics research, engineering experiments, and future competitive mech sports.
 
 ---
 
-![не загрузилось](media/VRBOT.gif)
+![walking prototype](media/Luka_right_view.gif)
 
 ---
 
-# Why Open Source?
+# What This Project Explores
 
-Great technological cultures grow around **open platforms**.
+Ellic explores several engineering directions:
 
-We believe the fastest way to build a new sport is to let the world participate.
+• human-scale locomotion mechanisms  
+• mechanical walking kinematics  
+• robotic control systems  
+• VR-linked locomotion interfaces  
+• experimental personal mobility  
 
-This repository contains the foundations of the Ellic platform:
-
-* locomotion mechanism research
-* CAD models and prototypes
-* control firmware
-* robotics interfaces
-* VR and simulation experiments
-* documentation and engineering notes
-
-Our goal is simple:
-
-**let anyone build, improve, and compete.**
-
----
-![не загрузилось](media/VRELLIC.gif)
----
-
-# The Current Prototype
-
-The current experimental machine is an **elliptical walking scooter mechanism**.
-
-It is a compact human-scale locomotion device combining:
-
-* mechanical walking kinematics
-* electric drive
-* robotic control systems
-* interactive VR integration
-
-The design aims to create a new category between:
-
-* scooter
-* exoskeleton
-* robotic vehicle
-
-The result is a **human-piloted locomotion platform**.
-
-![не загрузилось](media/Povorot_model_Solid2.gif)
----
-
-# The Long-Term Goal
-
-We are not just building a machine.
-
-We are building an **ecosystem**.
-
-Future stages include:
-
-**1. Open Hardware Platform**
-
-Builders around the world replicate and modify the Ellic mechanism.
-
-**2. Experimental Competitions**
-
-Small community tournaments begin to appear.
-
-**3. VR Integrated Matches**
-
-Physical locomotion interacts with digital battle environments.
-
-**4. Team Culture**
-
-Engineering teams design their own machines and strategies.
-
-**5. Media Championship**
-
-A global mech sport league emerges.
-
-![не отразилось](media/paren.gif)
----
-
-# The Community
-
-This repository is the starting point for a global builder community.
-
-You can participate as:
-
-* teams
-* engineer
-* roboticist
-* designer
-* game developer
-* mechanical builder
-* VR developer
-* sponsor
-* fan
-
-Or simply someone curious about the future of robotics and sport.
+The platform is designed as a **testbed for new locomotion ideas**.
 
 ---
 
-# What We Share
+# The Mechanism
 
-This repository will gradually include:
+The current prototype uses an **elliptical walking linkage**.
 
-* CAD models
-* firmware
-* robotics interfaces
-* VR experiments
-* simulation tools
-* research notes
-* competition ideas
+Instead of rolling wheels, the mechanism generates a smooth **step trajectory** using rotating mechanical links.
 
-The intention is to **make replication possible**.
+Potential advantages being explored:
 
-If you want to build your own machine — the resources will be here.
+- stable step trajectory
+- human-scale walking feel
+- compatibility with robotic control
+- unusual maneuverability
 
----
-
-# How To Join
-
-There are many ways to participate.
-
-### Builders
-
-Try building your own Ellic machine.
-
-### Engineers
-
-Improve the mechanism, firmware, or control systems.
-
-### Game Developers
-
-Help create VR environments and competitive mechanics.
-
-### Researchers
-
-Explore locomotion, biomechanics, and robotics control.
-
-### Media Creators
-
-Document the evolution of the machines.
-
-### Sponsors
-
-Support early tournaments and teams.
+This repository documents the design and experiments.
 
 ---
 
-# Future Competitions
-
-The ultimate goal is to create a new kind of championship.
-
-Possible formats include:
-
-* mech racing
-* arena duels
-* VR combat tournaments
-* team challenges
-* endurance competitions
-
-Each machine, team, and pilot becomes part of the sport’s evolving history.
+![turning model](media/Povorot_model_Solid2.gif)
 
 ---
+
+# Current Prototype
+
+The current Ellic machine is a **human-piloted locomotion prototype**.
+
+Main characteristics:
+
+- human rider platform
+- electric drive
+- elliptical walking linkage
+- electronic control system
+- experimental VR interface
+
+The machine is designed as a **research platform**, not a finished product.
+
+---
+
+# Repository Structure
+
+This repository contains all materials related to the Ellic platform.
+cad/
+Mechanical CAD models of the locomotion system
+
+docs/
+Documentation and manuals
+
+media/
+Videos, renders and animations of the machine
+
+firmware/
+Embedded control software (ESP32 based)
+
+ros/
+Robot Operating System experiments
+URDF models and Gazebo simulations
+
+simulation/
+Locomotion simulation experiments
+
+vr/
+Virtual reality integration experiments
+
+exoskeleton/
+Concept work on rider-linked mechanisms
+
+research/
+Engineering notes and mechanism research
+
+community/
+Community related materials
+
+CHEMP/
+HEPMC/
+Experimental research directions
+
+
+The goal is to make the **mechanism understandable and eventually replicable**.
+
+---
+
+# Control System
+
+The platform uses embedded control based on **ESP32 microcontrollers**.
+
+Current experiments include:
+
+- drive control
+- BLE interfaces
+- gamepad / VR control
+- locomotion feedback systems
+
+Firmware sources are located in:
+firmware/ESP32ELLIC
+
+
+---
+
+# Robotics Integration
+
+The Ellic platform is being explored as a **robotics research platform**.
+
+Experiments include:
+
+- ROS robot description
+- URDF models
+- Gazebo simulation
+- locomotion analysis
+
+Files are located in:
+ros/
+
+---
+
+# Simulation Experiments
+
+Simulation tools are used to explore:
+
+- walking kinematics
+- stability
+- control strategies
+
+Experiments are located in:
+
+simulation/
+
+---
+
+# VR Interaction
+
+Another direction of research is **VR-linked locomotion**.
+
+The idea is to connect physical locomotion to digital environments.
+
+Experiments include:
+
+- VR locomotion interfaces
+- game control integration
+- hybrid physical-virtual gameplay
+
+Files are located in:
+
+vr/
+
+---
+
+![VR experiment](media/VRELLIC.gif)
+
+---
+
+# Long-Term Vision
+
+The long-term vision is larger than a single machine.
+
+Ellic aims to become an **open locomotion platform**.
+
+Possible future stages:
+
+1. Open hardware locomotion platform
+2. Independent builder machines
+3. Experimental competitions
+4. Hybrid physical-VR matches
+5. A global **Mech Sport League**
+
+The idea is similar to how motorsport grew from early experimental machines.
+
+---
+
+# Founder Machines
+
+We have a small batch of **early assembled Ellic machines**
+ELLIC-14 Founder prototype edition.
+
+These machines are intended for:
+
+- robotics teams
+- research groups
+- experimental sports teams
+- XR developers
+
+Estimated price:
+
+≈ **$20,000**
+
+Founder teams would:
+
+- receive a working machine
+- skip early engineering work
+- experiment with control systems
+- participate in the first mech competitions
+
+
+---
+
+# Ways to Participate
+
+You can participate in the project in several ways.
+
+### Builder
+
+Attempt to replicate or modify the mechanism.
+
+### Engineer
+
+Improve control systems, firmware, or hardware.
+
+### Robotics Researcher
+
+Study locomotion and human-machine interaction.
+
+### Game Developer
+
+Experiment with VR locomotion interfaces.
+
+### Media Creator
+
+Document the development of experimental machines.
+
+---
+
 # Supporting the Project
 
-Developing hardware platforms takes time and resources.
-One way to support the project is to acquire an early assembled Ellic prototype.
+If you find the idea interesting:
 
-We are preparing a small number of fully assembled machines that teams can purchase.
+⭐ Star the repository  
+🔧 Fork the project  
+💡 Open issues with ideas  
+📢 Share the project  
 
-Price: ≈ 1M RUB ($20k) 
-Research machine founder edition 15.
-
-Gettin one allows you to:
-- Save significant engineering time
-- test control immediately
-- develop XR competition concepts
-- bit mythology of the future sport
-- get in first Ellic Founding Teams
-
-📄 **[Manual](docs/2022-10-10_EN_Инструкция_эксплуатации_Ellic.pdf)**  
-📝 **[Инструкция на русском в WORD](docs/2023-02-03_Инструкция_эксплуатации_Ellic_Механика.docx)**  
-
----
-# Your support to organize comunity competitions.
-
-If you believe in the idea of a new robotic sport:
-
-* star the repository
-* contribute ideas or code
-* share the project
-* support development
-* build your team
-
-Early supporters help shape the foundation of an entirely new competitive ecosystem.
+Early supporters help shape the foundation of a new locomotion ecosystem.
 
 ---
 
 # The Beginning
 
-Every major sport began with a few experimental machines and a handful of enthusiasts.
+Many major engineering cultures started with experimental machines built by small groups of enthusiasts.
 
-Today motorsport fills stadiums.
+Motorsport.  
+Robotics competitions.  
+Drone racing.
 
-Esports fill arenas.
+Ellic explores whether **human-piloted walking machines** could become the foundation of a new technological sport.
 
-Robotics will follow.
+This repository is the starting point.
 
-This repository is the beginning of that journey.
-
-If you want to help build the future of mech sport:
-
-**join us.**
+Join the experiment.
