@@ -76,7 +76,6 @@ The machine is designed as a **research platform**, not a finished product.
 This repository contains all materials related to the Ellic platform.
   
   **cad/**
-    
     Mechanical CAD models of the locomotion system
   
   *docs/*
