@@ -66,6 +66,8 @@ Main characteristics:
 
 The machine is designed as a **research platform**, not a finished product.
 
+![VR experiment](media/VRELLIC.gif)
+
 ---
 
 # Repository Structure
@@ -152,7 +154,8 @@ Files are located in:
 
 vr/
 
-![VR experiment](media/VRELLIC.gif)
+
+![VR experiment](media/VRBOT.gif)
 
 ---
 
