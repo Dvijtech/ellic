@@ -73,32 +73,27 @@ The machine is designed as a **research platform**, not a finished product.
 
 # Repository Structure
 
+# 📁 Структура репозитория
+
 This repository contains all materials related to the Ellic platform.
-  
-  cad/
-    Mechanical CAD models of the locomotion system
-  docs/
-    Documentation and manuals
-  media/
-    Videos, renders and animations of the machine
-  firmware/
-    Embedded control software (ESP32 based)
-  ros/
-    Robot Operating System experiments
-    URDF models and Gazebo simulations
-  simulation/
-    Locomotion simulation experiments
-  vr/
-    Virtual reality integration experiments
-  exoskeleton/
-    Concept work on rider-linked mechanisms
-  research/
-    Engineering notes and mechanism research
-  community/
-    Community related materials
-  CHEMP/
-  HEPMC/
-    Experimental research directions
+
+## 🔧 Основные компоненты
+- **⚙️ cad/** – Mechanical CAD models of the locomotion system
+- **📄 docs/** – Documentation and manuals
+- **🎬 media/** – Videos, renders and animations of the machine
+- **📟 firmware/** – Embedded control software (ESP32 based)
+
+## 🧪 Экспериментальные направления
+- **🤖 ros/** – Robot Operating System experiments, URDF models and Gazebo simulations
+- **📊 simulation/** – Locomotion simulation experiments
+- **🥽 vr/** – Virtual reality integration experiments
+- **🦿 exoskeleton/** – Concept work on rider-linked mechanisms
+
+## 📚 Исследования и сообщество
+- **📝 research/** – Engineering notes and mechanism research
+- **👥 community/** – Community related materials
+- **🧪 CHEMP/** – Experimental research directions
+- **⚛️ HEPMC/** – Experimental research directions
 
 
 The goal is to make the **mechanism understandable and eventually replicable**.
