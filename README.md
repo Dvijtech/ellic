@@ -48,8 +48,6 @@ Potential advantages being explored:
 
 This repository documents the design and experiments.
 
----
-
 ![turning model](media/Povorot_model_Solid2.gif)
 
 ---
@@ -113,10 +111,11 @@ Current experiments include:
 Firmware sources are located in:
 firmware/ESP32ELLIC
 
-
 ---
 
 # Robotics Integration
+Files are located in:
+ros/
 
 The Ellic platform is being explored as a **robotics research platform**.
 
@@ -127,25 +126,16 @@ Experiments include:
 - Gazebo simulation
 - locomotion analysis
 
-Files are located in:
-ros/
-
 ---
-
 # Simulation Experiments
-
 Simulation tools are used to explore:
-
 - walking kinematics
 - stability
 - control strategies
-
 Experiments are located in:
-
 simulation/
 
 ---
-
 # VR Interaction
 
 Another direction of research is **VR-linked locomotion**.
@@ -161,8 +151,6 @@ Experiments include:
 Files are located in:
 
 vr/
-
----
 
 ![VR experiment](media/VRELLIC.gif)
 
@@ -208,7 +196,6 @@ Founder teams would:
 - skip early engineering work
 - experiment with control systems
 - participate in the first mech competitions
-
 
 ---
 
