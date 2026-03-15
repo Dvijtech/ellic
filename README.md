@@ -14,8 +14,6 @@ Ellic sits somewhere between:
 
 The goal is to create a **replicable open hardware locomotion platform** for robotics research, engineering experiments, and future competitive mech sports.
 
----
-
 ![walking prototype](media/Luka_right_view.gif)
 
 ---
