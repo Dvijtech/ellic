@@ -191,7 +191,7 @@ These machines are intended for:
 
 Estimated price:
 
-[**$20,000**](main/docs/2022-10-10_EN_Инструкция_эксплуатации_Ellic.pdf)
+[**$20,000**](docs/2022-10-10_EN_Инструкция_эксплуатации_Ellic.pdf)
 
 Founder teams would:
 
