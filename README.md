@@ -73,18 +73,14 @@ The machine is designed as a **research platform**, not a finished product.
 
 # Repository Structure
 
-*This repository contains all materials related to the Ellic platform.*
+This repository contains all materials related to the Ellic platform.
   
   cad/
     Mechanical CAD models of the locomotion system
-  
   docs/
-    
     Documentation and manuals
-  
   media/
     Videos, renders and animations of the machine
-  
   firmware/
     Embedded control software (ESP32 based)
   ros/
