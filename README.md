@@ -32,6 +32,7 @@ Ellic explores several engineering directions:
 
 The platform is designed as a **testbed for new locomotion ideas**.
 
+![battle](media/battle.gif)
 ---
 
 # The Mechanism
