@@ -96,15 +96,18 @@ CAD models are available in multiple engineering formats:
 # 🧷 Ellic V14 Model
 
 ccskrf
+
+👉 
+![CAD](media\ViewEllicV14model.gif)
+
+
 <p align="center">
 <img src="media\ViewEllicV14model.gif" width="40%">
 </p>
 ccskrf
 
 The **Ellic V14 CAD model** can be accessed here:
-
-👉 **[CAD](media/ViewEllicV14model.gif)**
-
+👉 **[CAD]()**
 These files allow engineers to:
 
 - 🔍 study the mechanism geometry  
