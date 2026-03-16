@@ -14,30 +14,17 @@ This creates a motion somewhere between:
 - 🤖 a walking robot  
 - 🦿 a mechanical exoskeleton vehicle  
 
+# 🔁 Motion of the Mechanism
+
+<p align="left">
+  <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/moving_mechanism.gif" alt="View Ellic Model" width="40%">
+</p>
 
 ---
 
-# 🔁 Motion of the Mechanism
-Ssylka
-1
-media\walking_mechanism.gif
-2
-[media/walking_mechanism.gif](media\walking_mechanism.gif)
-3
-![media/walking_mechanism.gif](media\walking_mechanism.gif)
-4 
-<p align="center">
-<img src="media/walking_mechanism.gif" width="40%">
-</p>
-
-<p align="left">
-<video src="media/walking_machine.mov" width="50%" controls loop autoplay muted></video>
-</p>
-ssylka
-
 The video above shows the **core motion principle** of the Ellic walking mechanism.
 
-A rotating crank drives a linkage system that constrains the foot element to move along an **elliptical trajectory**.
+A rotating crank drives a linkage that moves the foot along an elliptical path: the foot pushes during the lower part and lifts during the upper part.
 
 During the **lower part of the path**, the foot stays close to the ground and generates **forward propulsion**.
 
@@ -106,25 +93,20 @@ CAD models are available in multiple engineering formats:
 
 # 🧷 Ellic V14 Model
 
-ccskrf
+The **Ellic V14 CAD model** can be accessed here
 
-👉 
-![CAD](media\ViewEllicV14model.gif)
-
-
-<p align="center">
-<img src="media\ViewEllicV14model.gif" width="40%">
-</p>
-ccskrf
-
-The **Ellic V14 CAD model** can be accessed here:
-👉 **[CAD]()**
 These files allow engineers to:
 
 - 🔍 study the mechanism geometry  
 - 📊 analyze the kinematics  
 - 🛠 experiment with modifications  
-- 🤖 build their own prototype  
+- 🤖 build their own prototype
+
+👉 **[CAD](media\ViewEllicV14model.gif)**
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/ViewEllicV14model.gif" alt="View Ellic Model" width="40%">
+</p>
 
 ---
 
