@@ -14,24 +14,17 @@ This creates a motion somewhere between:
 - 🤖 a walking robot  
 - 🦿 a mechanical exoskeleton vehicle  
 
-# 🔁 Motion of the Mechanism
+# 🔁 Motion of the Mechanism 
 
-<p align="left">
-  <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/moving_mechanism.gif" alt="View Ellic Model" width="40%">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/walking_mechanism.gif" alt="View Ellic Model" width="40%">
 </p>
-
----
 
 The video above shows the **core motion principle** of the Ellic walking mechanism.
 
-A rotating crank drives a linkage that moves the foot along an elliptical path: the foot pushes during the lower part and lifts during the upper part.
-
-During the **lower part of the path**, the foot stays close to the ground and generates **forward propulsion**.
-
-During the **upper part**, the foot lifts and moves forward to begin the next step.
+A rotating crank drives a linkage that moves the foot along an elliptical path.
 
 ---
-
 # 🧩 Main Mechanical Elements
 
 The basic mechanism consists of several key components:
@@ -64,11 +57,10 @@ The result is a **stable stepping locomotion pattern** suitable for a human-scal
 
 The behavior of the mechanism is determined by several geometric parameters:
 
-- 📐 **step length**  
-- 📐 **step height**  
-- ⏱ **ground contact duration**  
-- ⚙️ **crank radius**  
-- 🔩 **link lengths**
+- ⏱ **wheels size**  
+- 📐 **step length** 
+- 📐 **hands width**  
+ - 🔩 **link lengths**
 
 Changing these parameters alters:
 
@@ -80,8 +72,6 @@ Changing these parameters alters:
 ---
 
 # 🧪 Current Prototype
-
-The current experimental prototype is **Ellic V14**.
 
 CAD models are available in multiple engineering formats:
 
@@ -95,14 +85,14 @@ CAD models are available in multiple engineering formats:
 
 The **Ellic V14 CAD model** can be accessed here
 
-These files allow engineers to:
+👉 **[CAD]()**
 
-- 🔍 study the mechanism geometry  
+These files allow engineers to:
+- 🔍 explore the mechanism  
 - 📊 analyze the kinematics  
 - 🛠 experiment with modifications  
 - 🤖 build their own prototype
 
-👉 **[CAD](media\ViewEllicV14model.gif)**
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/ViewEllicV14model.gif" alt="View Ellic Model" width="40%">
