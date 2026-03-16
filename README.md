@@ -180,7 +180,7 @@ The idea is similar to how motorsport grew from early experimental machines.
 # Founder Machines
 
 We have a small batch of **early assembled Ellic machines**
-ELLIC-14 founder prototype edition.
+[ELLIC-14](docs/history/ellicDevHistory.md) founder prototype edition.
 
 These machines are intended for:
 
