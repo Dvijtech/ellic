@@ -19,7 +19,7 @@ This creates a motion somewhere between:
 
 # 🔁 Motion of the Mechanism
 
-<p align="center">
+<p align="left">
 <video src="media/walking_machine.mov" width="50%" controls loop autoplay muted></video>
 </p>
 
@@ -95,7 +95,7 @@ CAD models are available in multiple engineering formats:
 # 🧷 Ellic V14 Model
 
 <p align="center">
-<img src="media/ViewEllicV14model.gif" width="40%">
+<img src="media\ViewEllicV14model.gif" width="40%">
 </p>
 
 The **Ellic V14 CAD model** can be accessed here:
