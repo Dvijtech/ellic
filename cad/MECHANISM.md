@@ -95,9 +95,11 @@ CAD models are available in multiple engineering formats:
 
 # 🧷 Ellic V14 Model
 
+ccskrf
 <p align="center">
 <img src="media\ViewEllicV14model.gif" width="40%">
 </p>
+ccskrf
 
 The **Ellic V14 CAD model** can be accessed here:
 
