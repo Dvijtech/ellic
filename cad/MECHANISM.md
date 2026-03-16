@@ -18,10 +18,11 @@ This creates a motion somewhere between:
 ---
 
 # 🔁 Motion of the Mechanism
-
+Ssylka
 <p align="left">
 <video src="media/walking_machine.mov" width="50%" controls loop autoplay muted></video>
 </p>
+ssylka
 
 The video above shows the **core motion principle** of the Ellic walking mechanism.
 
