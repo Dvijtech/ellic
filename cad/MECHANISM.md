@@ -19,6 +19,17 @@ This creates a motion somewhere between:
 
 # 🔁 Motion of the Mechanism
 Ssylka
+1
+media\walking_mechanism.gif
+2
+[media/walking_mechanism.gif](media\walking_mechanism.gif)
+3
+![media/walking_mechanism.gif](media\walking_mechanism.gif)
+4 
+<p align="center">
+<img src="media/walking_mechanism.gif" width="40%">
+</p>
+
 <p align="left">
 <video src="media/walking_machine.mov" width="50%" controls loop autoplay muted></video>
 </p>
