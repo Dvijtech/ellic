@@ -97,7 +97,7 @@ This repository contains all materials related to the Ellic platform.
 
 - **🦿 exoskeleton/** – Concept work on rider-linked mechanisms
 
- ![VR experiment](media/VRELLIC.gif)
+ ![VR experiment](media/para_girl.gif)
 
 ## 📚 Исследования и сообщество
 - **📝 research/** – Engineering notes and mechanism research
@@ -122,15 +122,13 @@ Current experiments include:
 - locomotion feedback systems
 
 Firmware sources are located in:
-firmware/ESP32ELLIC
+[Arduino style code](firmware/ESP32ELLIC)
 
 ---
 
-# Robotics Integration
+# Robotics Simulation Experiments
 Files are located in:
 ros/
-
-The Ellic platform is being explored as a **robotics research platform**.
 
 Experiments include:
 
@@ -139,14 +137,15 @@ Experiments include:
 - Gazebo simulation
 - locomotion analysis
 
----
-# Simulation Experiments
 Simulation tools are used to explore:
 - walking kinematics
 - stability
 - control strategies
 Experiments are located in:
 simulation/
+
+
+The Ellic platform is being explored as a **robotics research platform MECHSPORT & PARAMECHSPORT**.
 
 ---
 # VR Interaction
@@ -213,46 +212,25 @@ Founder teams would:
 
 ---
 
-# Ways to Participate
+[START_A_TEAM](START_A_TEAM.md)
 
-You can participate in the project in several ways.
 
-### Builder
 
-Attempt to replicate or modify the mechanism.
+<a href="https://github.com/yourusername/yourrepo/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
 
-### Engineer
+<a href="https://github.com/yourusername/yourrepo/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
 
-Improve control systems, firmware, or hardware.
+<a href="https://github.com/yourusername/yourrepo/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
 
-### Robotics Researcher
-
-Study locomotion and human-machine interaction.
-
-### Game Developer
-
-Experiment with VR locomotion interfaces.
-
-### Media Creator
-
-Document the development of experimental machines.
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/yourusername/yourrepo" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
 
 ---
 
-# Supporting the Project
-
-If you find the idea interesting:
-
-⭐ Star the repository  
-🔧 Fork the project  
-💡 Open issues with ideas  
-📢 Share the project  
-
-Early supporters help shape the foundation of a new locomotion ecosystem.
-
----
-
-# Looking for the first 3 teams.
-
-If you want to become one of the founders of mech sport,
-contact us dselog@gmail.com
