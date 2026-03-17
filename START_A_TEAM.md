@@ -112,7 +112,24 @@ to support the growth of both the teams and the championship ecosystem.
 
 # 📧 Write to: **dselog@gmail.com**
 
-[START_A_TEAM](START_A_TEAM.md)
-
 
 [README.MD](README.md)
+
+---
+
+<a href="https://github.com/Dvijtech/ellic/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
+
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/Dvijtech/ellic" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
+
