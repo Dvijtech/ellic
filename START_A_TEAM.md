@@ -115,4 +115,4 @@ to support the growth of both the teams and the championship ecosystem.
 [START_A_TEAM](START_A_TEAM.md)
 
 
-[README.MD](readme.md)
+[README.MD](README.md)
