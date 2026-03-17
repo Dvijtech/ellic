@@ -108,3 +108,6 @@ The long-term economic model of the league is to share revenue with core teams:
 * 🤝 brands & integrations  
 
 to support the growth of both the teams and the championship ecosystem.
+
+
+# 📧 Write to: **dselog@gmail.com**
