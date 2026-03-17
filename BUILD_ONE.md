@@ -10,11 +10,19 @@ The goal is simple:
 👉 help you understand **what you really need to build one**
 
 
-<p align="center">
-  <img src="media/VRBOT.gif?v=3" width="30%">
-  <img src="media/battle.gif?v=1" width="30%">
-  <img src="media/VRELLIC.gif?v=2" width="30%">
-</p>
+<table align="center">
+  <tr>
+    <td align="center" valign="middle">
+      <img src="media/VRBOT.gif?v=3" width="100%">
+    </td>
+    <td align="center" valign="middle">
+      <img src="media/battle.gif?v=1" width="100%">
+    </td>
+    <td align="center" valign="middle">
+      <img src="media/VRELLIC.gif?v=2" width="100%">
+    </td>
+  </tr>
+</table>
 
 ---
 
