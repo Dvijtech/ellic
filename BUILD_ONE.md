@@ -11,9 +11,9 @@ The goal is simple:
 
 
 <p align="center">
+  <img src="media/VRBOT.gif?v=3" width="30%">
   <img src="media/battle.gif?v=1" width="30%">
   <img src="media/VRELLIC.gif?v=2" width="30%">
-  <img src="media/VRBOT.gif?v=3" width="30%">
 </p>
 
 ---
