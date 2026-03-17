@@ -9,49 +9,12 @@ It is not theoretical — it reflects the **actual workflow, tools, and decision
 The goal is simple:
 👉 help you understand **what you really need to build one**
 
-<div style="display: flex; gap: 10px; align-items: center;">
-  <a href="https://ссылка1.com">
-    <img src="media/battle.gif?v=1" height="100">
-  </a>
-  <a href="https://ссылка2.com">
-    <img src="media/VRELLIC.gif?v=2" height="100">
-  </a>
-  <a href="https://ссылка3.com">
-    <img src="media/VRBOT.gif?v=3" height="100">
-  </a>
-</div>
 
-<div style="display: flex; gap: 10px;">
-  <img src="media/battle.gif?v=1" height="100">
-  <img src="media/VRELLIC.gif?v=2" height="100">
-  <img src="media/VRBOT.gif?v=3" height="100">
-</div>
-
-#<img src="media/battle.gif" height="100"> <img src="media/VRELLIC.gif" height="100"> <img src="media/VRBOT.gif" height="100">
-
-<div style="display: flex; gap: 10px;">
-  <a href="https://ссылка1.com"><img src="media/battle.gif" height="100"></a>
-  <a href="https://ссылка2.com"><img src="media/VRELLIC.gif" height="100"></a>
-  <a href="https://ссылка3.com"><img src="media/VRBOT.gif" height="100"></a>
-</div>
-
-<div style="display: flex; gap: 10px; align-items: center;">
-  <a href="https://ссылка1.com">
-    <img src="media/battle.gif" height="100" loading="eager">
-  </a>
-  <a href="https://ссылка2.com">
-    <img src="media/VRELLIC.gif" height="100" loading="eager">
-  </a>
-  <a href="https://ссылка3.com">
-    <img src="media/VRBOT.gif" height="100" loading="eager">
-  </a>
-</div>
-
-<div style="display: flex; gap: 10px; align-items: center;">
-  <img src="media/battle.gif" height="100">
-  <img src="media/VRELLIC.gif" height="100">
-  <img src="media/VRBOT.gif" height="100">
-</div>
+<p align="center">
+  <img src="media/battle.gif?v=1" width="30%">
+  <img src="media/VRELLIC.gif?v=2" width="30%">
+  <img src="media/VRBOT.gif?v=3" width="30%">
+</p>
 
 ---
 
