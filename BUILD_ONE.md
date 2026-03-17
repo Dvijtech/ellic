@@ -9,6 +9,50 @@ It is not theoretical — it reflects the **actual workflow, tools, and decision
 The goal is simple:
 👉 help you understand **what you really need to build one**
 
+<div style="display: flex; gap: 10px; align-items: center;">
+  <a href="https://ссылка1.com">
+    <img src="media/battle.gif?v=1" height="100">
+  </a>
+  <a href="https://ссылка2.com">
+    <img src="media/VRELLIC.gif?v=2" height="100">
+  </a>
+  <a href="https://ссылка3.com">
+    <img src="media/VRBOT.gif?v=3" height="100">
+  </a>
+</div>
+
+<div style="display: flex; gap: 10px;">
+  <img src="media/battle.gif?v=1" height="100">
+  <img src="media/VRELLIC.gif?v=2" height="100">
+  <img src="media/VRBOT.gif?v=3" height="100">
+</div>
+
+#<img src="media/battle.gif" height="100"> <img src="media/VRELLIC.gif" height="100"> <img src="media/VRBOT.gif" height="100">
+
+<div style="display: flex; gap: 10px;">
+  <a href="https://ссылка1.com"><img src="media/battle.gif" height="100"></a>
+  <a href="https://ссылка2.com"><img src="media/VRELLIC.gif" height="100"></a>
+  <a href="https://ссылка3.com"><img src="media/VRBOT.gif" height="100"></a>
+</div>
+
+<div style="display: flex; gap: 10px; align-items: center;">
+  <a href="https://ссылка1.com">
+    <img src="media/battle.gif" height="100" loading="eager">
+  </a>
+  <a href="https://ссылка2.com">
+    <img src="media/VRELLIC.gif" height="100" loading="eager">
+  </a>
+  <a href="https://ссылка3.com">
+    <img src="media/VRBOT.gif" height="100" loading="eager">
+  </a>
+</div>
+
+<div style="display: flex; gap: 10px; align-items: center;">
+  <img src="media/battle.gif" height="100">
+  <img src="media/VRELLIC.gif" height="100">
+  <img src="media/VRBOT.gif" height="100">
+</div>
+
 ---
 
 # 🚀 What You Are Building
@@ -82,12 +126,12 @@ This is **80% of the real work**.
 
 ---
 
-# ⚙️ 2. Machined Parts (Outsourced or DIY)
+# ⚙️ 2. 🚲 Bike Components & Machined Parts (Outsourced or DIY)
 
-Some parts **cannot be avoided**.
 
 You will need:
 
+- standart bike components
 - simple shafts  
 - connection axles  
 
@@ -98,26 +142,13 @@ These are:
 - 🟢 easy to outsource  
 
 👉 You can order them from a local machinist.
-
----
-
-# 🚲 3. Bike Components (Parallel Step)
-
-A large part of Ellic uses **standard bicycle components**.
-
-You need:
-
-- drivetrain parts  
-- mechanical connectors  
-- possibly wheels / motor wheels  
-
 👉 Option:
 - source yourself  
-- or order a **pre-selected kit from the project**
+- or order a **pre-selected kit from the project. just ask me somhere here**
 
 ---
 
-# 🔩 4. Laser-Cut Parts (Highly Recommended)
+# 🔩 3. Laser-Cut Parts (Highly Recommended)
 
 For:
 
@@ -136,44 +167,18 @@ Without it:
 
 ---
 
-# 🧱 5. Optional: 3D Printing
-
-Useful for:
+# 🧱 4. Optional: 🎨 Body & Styling 3D Printing
 
 - covers  
-- mounts  
-- interface parts  
 - visual design  
-
-Alternatives:
-
 - plywood 🪵  
 - foam panels 🧩  
-
-High-end builds may use:
-
-- metal  
 - composite / carbon panels  
-
----
-
-# 🎨 6. Body & Styling
-
 Not required for function, but important for experience.
 
-Typical materials:
-
-- rubberized foam panels  
-- plastic sheets  
-- composite shells  
-
-👉 This is where Ellic becomes:
-
-**a machine → a mech**
-
 ---
 
-# 🔌 7. Electronics Assembly
+# 🔌 5. 🔗 Wiring & Electronics Assembly 
 
 After mechanics works — add electronics.
 
@@ -185,31 +190,18 @@ After mechanics works — add electronics.
 - 🧠 ESP32 controller (WiFi + BLE)  
 - 🎮 joystick  
 
-Everything is mounted directly on the frame.
-
----
-
-# 🔗 8. Wiring
-
-Connect:
+Everything is mounted directly on the framу CONNECT:
 
 - motor drivers → motor wheels  
 - battery → drivers  
 - ESP32 → control signals  
 - joystick → ESP32  
 
-⚠️ Important:
-
-- keep wires away from moving parts  
-- secure everything physically  
-
 ---
 
-# 🧪 9. First Functional Mode (Scooter Mode)
+# 🧪 6. First Functional Mode (Scooter Mode)
 
-At this stage:
-
-👉 The machine works as a **drive platform**
+At this stage: 👉 The machine works as a **drive platform**
 
 Control logic:
 
@@ -225,7 +217,7 @@ You now have:
 
 ---
 
-# 🤖 10. Mech Mode (Extended System)
+# 🤖 7. Mech Mode (Extended System)
 
 Now the interesting part.
 
@@ -247,25 +239,13 @@ You can:
 
 ---
 
-# 🎯 11. MechSport Layer
+# 🎯 8. MechSport Layer
 
 With full setup:
 
 - 🎮 player controls mech  
 - 🚶 machine mirrors motion  
 - 🔫 virtual weapons controlled by joystick  
-
-You can:
-
-- participate in mech competitions  
-- score points  
-- join teams  
-
-Future direction:
-
-- 🏆 tournaments  
-- 💰 prize pools  
-- 🤝 team revenue sharing  
 
 ---
 
@@ -284,78 +264,39 @@ Real build flow:
 
 ---
 
-# 💰 Cost Reality
+# 💰 Cost & Time
 
 Typical prototype:
 
 - $3,000 – $7,000 (DIY build)
-
-Prebuilt system (future):
-
+Prebuilt system:
 - ~$20,000  
+- solo builder: **2-4 months**  
 
 ---
 
-# ⏱️ Time Estimate
+# All the draws, CAD models, firmware i try you can [get here]() 
 
-- solo builder: **1–3 months**  
-- small team: faster  
+If not just ask me dselog@gmail.com 
 
----
+[README.MD](README.md)
 
-# 🧪 Current State
-
-This is still:
-
-- experimental ⚠️  
-- evolving ⚠️  
-- not production-ready ⚠️  
-
-Expect:
-
-- tuning  
-- failures  
-- redesigns  
+[START_A_TEAM](START_A_TEAM.md)
 
 ---
 
-# 🤝 If You Build One
+<a href="https://github.com/Dvijtech/ellic/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
 
-If you attempt:
+<a href="https://github.com/Dvijtech/ellic/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
 
-- 📸 document everything  
-- 🧠 share insights  
-- 🐞 open issues  
+<a href="https://github.com/Dvijtech/ellic/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
 
-👉 This project grows through builders.
-
----
-
-# 🌍 Why This Matters
-
-Ellic is not just a machine.
-
-It is an attempt to explore:
-
-👉 **a new class of human-scale locomotion systems**
-
-If enough people build and experiment:
-
-- designs improve  
-- use cases emerge  
-- a new category can form  
-
----
-
-# 🔜 What's Next
-
-Future versions will include:
-
-- detailed drawings  
-- exact part lists  
-- assembly tolerances  
-- control system documentation  
-
----
-
-**Build one. Break it. Improve it. Repeat.** 🔁
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/Dvijtech/ellic" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
