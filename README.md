@@ -4,6 +4,8 @@ If you want to become one of the founders of mech sport
 
 [START_A_TEAM](START_A_TEAM.md)
 
+[BUILD_ONE](BUILD_ONE.md)
+
 
 
 # ELLIC
@@ -73,6 +75,8 @@ Main characteristics:
 - experimental VR interface
 
 The machine is designed as a **research platform**, not a finished product.
+
+[CURRENT MODELS FUSION 360, STEP, STL ARE HERE](cad/MECHANISM.md)
 
 ---
 
