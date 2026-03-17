@@ -112,6 +112,7 @@ to support the growth of both the teams and the championship ecosystem.
 
 # 📧 Write to: **dselog@gmail.com**
 
+[START_A_TEAM](START_A_TEAM.md)
 
 
 [README.MD](readme.md)
