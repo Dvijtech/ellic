@@ -43,7 +43,11 @@ The platform is designed as a **testbed for new locomotion ideas**.
 ![battle](media/battle.gif)
 ---
 
-# Current Prototype Mechanism
+# CURRENT PROTOTYPE MECHANISM
+
+## Models are here: [FUSION 360, STEP, STL](cad)
+
+### description [cad/MECHANISM.md](cad/MECHANISM.md)
 
 The current prototype uses an **elliptical walking linkage**.
 
@@ -60,8 +64,6 @@ This repository documents the design and experiments.
 
 ![turning model](media/Povorot_model_Solid2.gif)
 
-## The current Ellic machine is a **human-piloted locomotion prototype**.
-
 - human rider platform
 - electric drive
 - elliptical walking linkage
@@ -70,7 +72,7 @@ This repository documents the design and experiments.
 
 The machine is designed as a **research platform**, not a finished product.
 
-[CURRENT MODELS FUSION 360, STEP, STL ARE HERE](cad/MECHANISM.md)
+
 
 ---
 
