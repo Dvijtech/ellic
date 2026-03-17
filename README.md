@@ -43,7 +43,7 @@ The platform is designed as a **testbed for new locomotion ideas**.
 ![battle](media/battle.gif)
 ---
 
-# The Mechanism
+# Current Prototype Mechanism
 
 The current prototype uses an **elliptical walking linkage**.
 
@@ -60,13 +60,7 @@ This repository documents the design and experiments.
 
 ![turning model](media/Povorot_model_Solid2.gif)
 
----
-
-# Current Prototype
-
-The current Ellic machine is a **human-piloted locomotion prototype**.
-
-Main characteristics:
+## The current Ellic machine is a **human-piloted locomotion prototype**.
 
 - human rider platform
 - electric drive
