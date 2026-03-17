@@ -1,7 +1,8 @@
 # Looking for the first 3 teams
 
-If you want to become one of the founders of mech sport,
-contact us dselog@gmail.com
+If you want to become one of the founders of mech sport
+
+[START_A_TEAM](START_A_TEAM.md)
 
 
 
@@ -73,8 +74,6 @@ Main characteristics:
 
 The machine is designed as a **research platform**, not a finished product.
 
-![VR experiment](media/VRELLIC.gif)
-
 ---
 
 # Repository Structure
@@ -93,7 +92,12 @@ This repository contains all materials related to the Ellic platform.
 - **🤖 ros/** – Robot Operating System experiments, URDF models and Gazebo simulations
 - **📊 simulation/** – Locomotion simulation experiments
 - **🥽 vr/** – Virtual reality integration experiments
+
+![VR experiment](media/VRELLIC.gif)
+
 - **🦿 exoskeleton/** – Concept work on rider-linked mechanisms
+
+ ![VR experiment](media/VRELLIC.gif)
 
 ## 📚 Исследования и сообщество
 - **📝 research/** – Engineering notes and mechanism research
