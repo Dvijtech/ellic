@@ -1,3 +1,10 @@
+# Looking for the first 3 teams
+
+If you want to become one of the founders of mech sport,
+contact us dselog@gmail.com
+
+
+
 # ELLIC
 
 ### Open Locomotion Platform
@@ -241,16 +248,7 @@ Early supporters help shape the foundation of a new locomotion ecosystem.
 
 ---
 
-# The Beginning
+# Looking for the first 3 teams.
 
-Many major engineering cultures started with experimental machines built by small groups of enthusiasts.
-
-Motorsport.  
-Robotics competitions.  
-Drone racing.
-
-Ellic explores whether **human-piloted walking machines** could become the foundation of a new technological sport.
-
-This repository is the starting point.
-
-Join the experiment.
+If you want to become one of the founders of mech sport,
+contact us dselog@gmail.com
