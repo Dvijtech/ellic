@@ -1,336 +1,361 @@
-# BUILD ONE ELLIC
+# 🛠️ BUILD ONE ELLIC
 
-### Experimental Build Guide (Early Version)
+### Experimental Build Guide (Real-World Version)
 
-This document explains how a **single experimental Ellic locomotion machine** can be built.
+This document describes how a **real Ellic machine is actually built in practice**.
 
-The guide is intentionally simple and incomplete.
-It is meant to help **engineers understand the scale and structure of the machine**, not to serve as a fully detailed manufacturing manual.
+It is not theoretical — it reflects the **actual workflow, tools, and decisions** used during prototyping.
 
-More detailed instructions will appear as the project evolves.
-
----
-
-# What You Are Building
-
-Ellic is a **human-scale walking locomotion machine** based on an **elliptical mechanical linkage**.
-
-Instead of wheels rolling continuously, the mechanism produces a **step-like trajectory** using rotating links.
-
-The result is a vehicle that moves in a motion somewhere between:
-
-* a scooter
-* a walking machine
-* a mechanical exoskeleton vehicle
-
-The prototype is designed as a **research platform** rather than a finished consumer product.
+The goal is simple:
+👉 help you understand **what you really need to build one**
 
 ---
 
-# Important Warning
+# 🚀 What You Are Building
 
-This is an **experimental machine**.
+Ellic is a **human-scale walking machine** driven by an **elliptical linkage mechanism**.
 
-It involves:
+It behaves somewhere between:
 
-* mechanical loads
-* moving linkages
-* electric drive systems
+- 🛴 a scooter  
+- 🚶 a walking machine  
+- 🤖 a mech-like vehicle  
 
-Improper construction or testing may cause **equipment damage or personal injury**.
-
-Anyone attempting to build this machine should have experience with:
-
-* mechanical fabrication
-* basic electrical systems
-* safe prototype testing
-
-Always perform initial tests at **very low speed** and with safety support.
+This is not just transport — it is a **mechanical platform + experimental interface system**.
 
 ---
 
-# Expected Difficulty
+# ⚠️ Important Warning
 
-Building a prototype requires moderate to advanced workshop capabilities.
+This is a **mechanically active experimental system**.
 
-Typical requirements:
+Risks include:
 
-* metal fabrication
-* mechanical assembly
-* basic electronics integration
-* firmware flashing and testing
+- moving linkages ⚙️  
+- structural loads 🏗️  
+- electric drive systems ⚡  
 
-Estimated build time for a small engineering team or experienced builder:
+👉 Build only if you understand:
+- mechanical systems
+- basic electronics
+- safe testing practices
 
-**1–3 months**
-
----
-
-# Estimated Cost
-
-Prototype cost varies depending on fabrication methods.
-
-Typical range:
-
-**$3,000 – $7,000**
-if parts are fabricated in a workshop.
-
-A fully assembled research machine prepared by the project may cost approximately:
-
-**~$20,000**
+Always test:
+- at **low speed**
+- with **support**
+- with **emergency stop ready**
 
 ---
 
-# Main Subsystems
+# 🧠 How the Build Actually Happens
 
-An Ellic machine consists of several major subsystems.
+The build is **not linear engineering perfection**.
 
-## 1. Structural Frame
+In reality, it looks like this:
 
-The frame holds:
+👉 Mechanics first  
+👉 Parts sourcing in parallel  
+👉 Electronics later  
+👉 Software last  
 
-* the rider platform
-* the locomotion mechanism
-* the drive system
+---
+
+# 🔧 1. Mechanical Fabrication (Core Stage)
+
+This is **80% of the real work**.
+
+### Required tools:
+
+- angle grinder (minimum viable) 🪚  
+- tube cutting + bending tools 🔩  
+- welding setup 🔥  
+- (optional but ideal) laser cutter ✂️  
+
+### Materials:
+
+- steel tubes (main structure)
+- standard bearings (used as-is)
+
+💡 Design principle:
+> Bearings are selected to fit directly into standard tubes  
+(no complex machining required)
+
+---
+
+# ⚙️ 2. Machined Parts (Outsourced or DIY)
+
+Some parts **cannot be avoided**.
+
+You will need:
+
+- simple shafts  
+- connection axles  
+
+These are:
+
+- 🟢 cheap  
+- 🟢 simple  
+- 🟢 easy to outsource  
+
+👉 You can order them from a local machinist.
+
+---
+
+# 🚲 3. Bike Components (Parallel Step)
+
+A large part of Ellic uses **standard bicycle components**.
+
+You need:
+
+- drivetrain parts  
+- mechanical connectors  
+- possibly wheels / motor wheels  
+
+👉 Option:
+- source yourself  
+- or order a **pre-selected kit from the project**
+
+---
+
+# 🔩 4. Laser-Cut Parts (Highly Recommended)
+
+For:
+
+- brackets  
+- mounts  
+- structural connectors  
+
+👉 A **laser cutter** significantly improves:
+
+- precision  
+- assembly speed  
+- rigidity  
+
+Without it:
+- you can improvise, but accuracy will drop
+
+---
+
+# 🧱 5. Optional: 3D Printing
+
+Useful for:
+
+- covers  
+- mounts  
+- interface parts  
+- visual design  
+
+Alternatives:
+
+- plywood 🪵  
+- foam panels 🧩  
+
+High-end builds may use:
+
+- metal  
+- composite / carbon panels  
+
+---
+
+# 🎨 6. Body & Styling
+
+Not required for function, but important for experience.
 
 Typical materials:
 
-* steel tubing
-* aluminum plates
-* welded or bolted frame structure
+- rubberized foam panels  
+- plastic sheets  
+- composite shells  
 
-The frame must be rigid enough to handle rider weight and dynamic loads.
+👉 This is where Ellic becomes:
 
----
-
-## 2. Locomotion Linkage
-
-The core of the machine is an **elliptical walking linkage**.
-
-It converts rotary motion from the drive system into a **closed stepping trajectory**.
-
-Main elements include:
-
-* rotating crank
-* connecting rods
-* step linkage
-* foot platform or wheel-foot element
-
-The geometry determines:
-
-* step length
-* ground contact timing
-* overall stability
-
-CAD models in this repository describe the current experimental geometry.
+**a machine → a mech**
 
 ---
 
-## 3. Drive System
+# 🔌 7. Electronics Assembly
 
-The locomotion linkage is powered by an electric drive.
+After mechanics works — add electronics.
 
-Typical configuration:
+### Core components:
 
-* electric motor
-* reduction gearbox
-* chain or belt transmission
-* crank shaft drive
+- ⚡ 2× motor wheel drivers  
+- 🔋 battery (36V, 4–8Ah)  
+- 🔽 voltage step-down converter  
+- 🧠 ESP32 controller (WiFi + BLE)  
+- 🎮 joystick  
 
-The goal is to produce **slow, controlled torque**, not high speed.
-
----
-
-## 4. Rider Platform
-
-The rider platform includes:
-
-* standing support
-* steering interface
-* safety handles or bars
-
-The rider acts as the **human pilot** of the machine.
-
-Weight distribution and balance are important for stability.
+Everything is mounted directly on the frame.
 
 ---
 
-## 5. Electronics
+# 🔗 8. Wiring
 
-Basic electronics include:
+Connect:
 
-* motor controller
-* microcontroller
-* battery pack
-* safety power switch
+- motor drivers → motor wheels  
+- battery → drivers  
+- ESP32 → control signals  
+- joystick → ESP32  
 
-Early prototypes use **ESP32-based control electronics**.
+⚠️ Important:
 
-Firmware examples are located in:
-
-```
-firmware/ESP32ELLIC
-```
+- keep wires away from moving parts  
+- secure everything physically  
 
 ---
 
-## 6. Control System
+# 🧪 9. First Functional Mode (Scooter Mode)
 
-The control system is experimental.
+At this stage:
 
-Possible interfaces include:
+👉 The machine works as a **drive platform**
 
-* joystick or gamepad
-* BLE control
-* VR-linked control experiments
+Control logic:
 
-Different control experiments are documented in:
+- joystick → ESP32  
+- ESP32 → motor drivers  
+- motor wheels → motion  
 
-```
-vr/
-ros/
-firmware/
-```
+You now have:
 
----
-
-# Basic Build Sequence
-
-A typical build process might follow these steps.
-
-### 1 Frame Fabrication
-
-Build the main chassis frame.
-
-Ensure:
-
-* rigid structure
-* accurate mounting points
-* sufficient ground clearance
+🟢 a controllable vehicle  
+🟢 basic mobility  
+🟢 testable system  
 
 ---
 
-### 2 Linkage Assembly
+# 🤖 10. Mech Mode (Extended System)
 
-Assemble the locomotion linkage system.
+Now the interesting part.
 
-Check carefully:
+You can connect:
 
-* alignment
-* free movement
-* absence of binding
+- 🥽 VR headset  
+- 🎮 same joystick  
+- 💻 Unreal Engine system (from repo)
 
-This is the most mechanically sensitive part of the machine.
+Result:
 
----
+👉 The machine becomes part of a **mixed-reality mech system**
 
-### 3 Drive Installation
+You can:
 
-Install:
-
-* motor
-* gearbox
-* transmission
-* crank shaft
-
-Verify rotation before attaching the linkage.
+- control movement physically  
+- control a mech avatar  
+- interact in AR/VR space  
 
 ---
 
-### 4 Electronics Installation
+# 🎯 11. MechSport Layer
 
-Mount:
+With full setup:
 
-* battery
-* motor driver
-* microcontroller
-* emergency power cutoff
+- 🎮 player controls mech  
+- 🚶 machine mirrors motion  
+- 🔫 virtual weapons controlled by joystick  
 
-Route cables safely away from moving parts.
+You can:
 
----
+- participate in mech competitions  
+- score points  
+- join teams  
 
-### 5 Firmware Setup
+Future direction:
 
-Flash firmware to the control board.
-
-Initial tests should verify:
-
-* motor direction
-* throttle response
-* emergency stop
+- 🏆 tournaments  
+- 💰 prize pools  
+- 🤝 team revenue sharing  
 
 ---
 
-### 6 First Motion Tests
+# 🧭 Build Summary (Reality)
 
-Initial tests should be done:
+Real build flow:
 
-* at very low speed
-* with external support
-* without a rider if possible
-
-Observe:
-
-* linkage motion
-* frame vibration
-* ground contact stability
-
----
-
-### 7 First Ride
-
-Once the mechanism behaves predictably, a careful first ride can be attempted.
-
-Use:
-
-* protective gear
-* a controlled environment
-* low speed
-
-Expect tuning and adjustments.
-
-This is an experimental platform.
+1. 🔧 fabricate frame  
+2. ⚙️ assemble linkage  
+3. 🧱 install machined parts  
+4. 🚲 add bike components  
+5. 🔩 mount brackets (laser-cut)  
+6. 🔌 install electronics  
+7. 🎮 test scooter mode  
+8. 🤖 connect VR system  
 
 ---
 
-# Current Limitations
+# 💰 Cost Reality
 
-The current Ellic prototype is still under development.
+Typical prototype:
 
-Known limitations include:
+- $3,000 – $7,000 (DIY build)
 
-* experimental stability
-* mechanical tuning required
-* control systems evolving
-* limited long-term durability testing
+Prebuilt system (future):
 
-Builders should treat this machine as a **research prototype**.
+- ~$20,000  
 
 ---
 
-# If You Attempt a Build
+# ⏱️ Time Estimate
 
-If you attempt to build an Ellic machine:
-
-* document your progress
-* share photos or notes
-* open an issue in the repository
-
-Independent builders help improve the design.
+- solo builder: **1–3 months**  
+- small team: faster  
 
 ---
 
-# Why This Guide Exists
+# 🧪 Current State
 
-The goal of the Ellic project is not only to build a single machine.
+This is still:
 
-It is to explore whether **human-scale walking machines** can become a new engineering platform.
+- experimental ⚠️  
+- evolving ⚠️  
+- not production-ready ⚠️  
 
-If multiple people experiment with similar mechanisms, the design can evolve faster.
+Expect:
 
-This document is the **first step toward that possibility**.
+- tuning  
+- failures  
+- redesigns  
 
 ---
 
-More detailed build documentation will appear in future versions.
+# 🤝 If You Build One
+
+If you attempt:
+
+- 📸 document everything  
+- 🧠 share insights  
+- 🐞 open issues  
+
+👉 This project grows through builders.
+
+---
+
+# 🌍 Why This Matters
+
+Ellic is not just a machine.
+
+It is an attempt to explore:
+
+👉 **a new class of human-scale locomotion systems**
+
+If enough people build and experiment:
+
+- designs improve  
+- use cases emerge  
+- a new category can form  
+
+---
+
+# 🔜 What's Next
+
+Future versions will include:
+
+- detailed drawings  
+- exact part lists  
+- assembly tolerances  
+- control system documentation  
+
+---
+
+**Build one. Break it. Improve it. Repeat.** 🔁
