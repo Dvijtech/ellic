@@ -1,6 +1,7 @@
 #CronsHobot# looks like 
 
-![# CronsHobot_10mm_EllicV15](cad/manufacturing/laser/10mm/CronsHobot_10mm_EllicV15.png)
+![# CronsHobot_10mm_EllicV15](cad/manufacturing/laser/10mm/CronsHobot_10mm_EllicV15.PNG)
+
 
 # CronsHobot parts are:
 looks like ![CronsHobot_10mm_EllicV15](cad/manufacturing/laser/10mm/CronsHobot_10mm_EllicV15.png)
