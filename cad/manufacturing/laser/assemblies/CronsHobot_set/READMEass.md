@@ -1,6 +1,6 @@
 CronsHobot parts are:
 
-[cad/manufacturing/laser/10mm/laser_frontplate_10mm_ellicV15.dxf] (cad/manufacturing/laser/10mm/laser_frontplate_10mm_ellicV15.dxf)
+[cad/manufacturing/laser/10mm/laser_frontplate_10mm_ellicV15.dxf](cad/manufacturing/laser/10mm/laser_frontplate_10mm_ellicV15.dxf)
 
 [cad/manufacturing/laser/10mm/laser_mountplate_10mm_EllicV15.dxf](cad/manufacturing/laser/10mm/laser_mountplate_10mm_EllicV15.dxf)
 
