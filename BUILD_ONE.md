@@ -250,7 +250,7 @@ Prebuilt system:
 
 If not just ask me dselog@gmail.com 
 
-[README.ma](README.md)
+[README.md](README.md)
 
 [START_A_TEAM](START_A_TEAM.md)
 
