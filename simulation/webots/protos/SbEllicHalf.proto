@@ -1,0 +1,45 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "Frame.proto"
+EXTERNPROTO "Crank.proto"
+
+PROTO SbEllicHalf [
+  field SFColor frameColor 0.8 0.8 0.8
+  field SFColor crankColor 0.2 0.2 0.2
+]
+{
+  Robot {
+    controller "ellic_controller"
+
+    children [
+
+      # === FRAME ===
+      Frame {
+        color IS frameColor
+      }
+
+      # === CRANK JOINT ===
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          anchor 0 0 0
+          axis 0 0 1
+        }
+
+        device [
+          RotationalMotor {
+            name "crank_motor"
+            maxVelocity 10
+          }
+          PositionSensor {
+            name "crank_sensor"
+          }
+        ]
+
+        endPoint Crank {
+          color IS crankColor
+        }
+      }
+
+    ]
+  }
+}

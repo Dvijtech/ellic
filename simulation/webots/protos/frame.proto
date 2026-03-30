@@ -1,0 +1,37 @@
+#VRML_SIM R2023b utf8
+
+PROTO Frame [
+  field SFColor color 0.8 0.8 0.8
+]
+{
+  Solid {
+    name "frame"
+    children [
+      Transform {
+        rotation 0 0 1 0.527  # ~30.2°
+
+        children [
+          Shape {
+            appearance Appearance {
+              material Material {
+                diffuseColor IS color
+              }
+            }
+            geometry Box {
+              size 0.817 0.03 0.03
+            }
+          }
+        ]
+      }
+    ]
+
+    boundingObject Box {
+      size 0.817 0.03 0.03
+    }
+
+    physics Physics {
+      mass 5
+      density -1
+    }
+  }
+}

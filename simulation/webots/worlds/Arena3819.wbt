@@ -2,19 +2,36 @@
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
+EXTERNPROTO "../protos/SbEllicHalf.proto"
+EXTERNPROTO "../protos/frame.proto"
+EXTERNPROTO "../protos/crank.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.5830377137357127 0.5658038457800224 0.5830377624668662 2.11180624843122
-  position 0.00014461613800178591 0.0001446165468859858 80.27902832995906
+  orientation -0.593906774675596 0.5427239759590389 0.5939069194020588 2.147117909571644
+  position -7.842353526502751e-05 -7.842375662271952e-05 1.4003826427685842
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
-RectangleArena {
-  rotation 0 1 0 0
-  floorSize 38 19
+Floor {
+  contactMaterial ""
+}
+SbEllicHalf {
+  hidden position_0_0 3.157413637285324e-09
+  hidden translation_1 3.615141068982984e-13 1.306267223147114e-06 0.0010305449919587994
+  hidden rotation_1 -0.9999999982195803 -3.3346286681885805e-06 5.957952210759007e-05 2.9969905934980504e-09
+}
+Frame {
+  hidden translation_0 8.603253934669145e-13 -1.50779895509379e-05 -0.015167584988932482
+  hidden rotation_0 -1 -5.318426804659965e-10 -1.346902399899078e-08 0.00030699330225697084
+  color 0.2 0.8 0.8
+}
+Crank {
+  hidden translation_0 1.5789301706922889e-12 1.9873829088416042e-05 -0.0051936251372936
+  hidden rotation_0 0.9999999999991293 2.3037472283113448e-07 -1.2993639814003606e-06 0.0006904131883245847
+  color 0.8 0.2 0.2
 }

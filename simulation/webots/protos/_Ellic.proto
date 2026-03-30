@@ -1,0 +1,70 @@
+#VRML_SIM R2023b utf8
+
+PROTO Ellic [
+  field SFColor frameColor 0.8 0.8 0.8
+  field SFColor crankColor 0.2 0.2 0.2
+]
+{
+  Robot {
+    children [
+
+      # === FRAME ===
+      Transform {
+        rotation 0 0 1 0.527
+
+        children [
+          Shape {
+            appearance Appearance {
+              material Material {
+                diffuseColor IS frameColor
+              }
+            }
+            geometry Box {
+              size 0.817 0.03 0.03
+            }
+          }
+        ]
+      }
+
+      # === CRANK JOINT ===
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          anchor 0 0 0
+          axis 0 0 1
+        }
+
+        device [
+          RotationalMotor {
+            name "crank_motor"
+            maxVelocity 10
+          }
+          PositionSensor {
+            name "crank_sensor"
+          }
+        ]
+
+        endPoint Solid {
+          translation 0.035 0 0
+
+          children [
+            Shape {
+              appearance Appearance {
+                material Material {
+                  diffuseColor IS crankColor
+                }
+              }
+              geometry Box {
+                size 0.07 0.01 0.01
+              }
+            }
+          ]
+
+          physics Physics {
+            mass 0.1
+          }
+        }
+      }
+
+    ]
+  }
+}
