@@ -13,9 +13,10 @@ PROTO SbEllicHalf [
 
     children [
 
-      # === FRAME ===
+      # === FRAME (offset of pivot)===
       Frame {
         color IS frameColor
+        translation 0.3545 0.206 0
       }
 
       # === CRANK JOINT ===

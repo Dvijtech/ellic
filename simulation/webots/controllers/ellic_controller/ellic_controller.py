@@ -1,5 +1,3 @@
-import sys
-sys.path.append('/usr/lib/python3/dist-packages')  # Adjust this path based on your Webots installation
 from controller import Robot
 
 robot = Robot()

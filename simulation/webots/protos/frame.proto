@@ -1,11 +1,15 @@
 #VRML_SIM R2023b utf8
 
 PROTO Frame [
-  field SFColor color 0.8 0.8 0.8
+    field SFColor color 0.8 0.8 0.8
+  field SFVec3f translation 0 0 0
 ]
 {
   Solid {
     name "frame"
+
+    translation IS translation
+
     children [
       Transform {
         rotation 0 0 1 0.527  # ~30.2°

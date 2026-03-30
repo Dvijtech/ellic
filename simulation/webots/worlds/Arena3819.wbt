@@ -4,8 +4,8 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
 EXTERNPROTO "../protos/SbEllicHalf.proto"
-EXTERNPROTO "../protos/frame.proto"
-EXTERNPROTO "../protos/crank.proto"
+EXTERNPROTO "../protos/Frame.proto"
+EXTERNPROTO "../protos/Crank.proto"
 
 WorldInfo {
 }
@@ -21,17 +21,5 @@ Floor {
   contactMaterial ""
 }
 SbEllicHalf {
-  hidden position_0_0 3.157413637285324e-09
-  hidden translation_1 3.615141068982984e-13 1.306267223147114e-06 0.0010305449919587994
-  hidden rotation_1 -0.9999999982195803 -3.3346286681885805e-06 5.957952210759007e-05 2.9969905934980504e-09
 }
-Frame {
-  hidden translation_0 8.603253934669145e-13 -1.50779895509379e-05 -0.015167584988932482
-  hidden rotation_0 -1 -5.318426804659965e-10 -1.346902399899078e-08 0.00030699330225697084
-  color 0.2 0.8 0.8
-}
-Crank {
-  hidden translation_0 1.5789301706922889e-12 1.9873829088416042e-05 -0.0051936251372936
-  hidden rotation_0 0.9999999999991293 2.3037472283113448e-07 -1.2993639814003606e-06 0.0006904131883245847
-  color 0.8 0.2 0.2
-}
+
