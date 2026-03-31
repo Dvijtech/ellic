@@ -3,45 +3,36 @@
 EXTERNPROTO "Frame.proto"
 EXTERNPROTO "Crank.proto"
 
-
 PROTO SbEllicHalf [
-  field SFColor frameColor 0.8 0.8 0.8
-  field SFColor crankColor 0.2 0.2 0.2
 ]
 {
   Robot {
     controller "ellic_controller"
 
     children [
-
-      # === FRAME (offset of pivot)===
-      Frame {
-        color IS frameColor
-        translation 0.3545 0.206 0
-      }
-
-      # === CRANK JOINT ===
-      HingeJoint {
-        jointParameters HingeJointParameters {
-          anchor 0 0 0
-          axis 0 0 1
+        # === FRAME (визуал + физика) ===
+        Frame {
+            translation 0 0 0
+            rotation 0 0 1 0.527
         }
 
+        # === CRANK JOINT (в конце фрейма) ===
+        HingeJoint {
+        jointParameters HingeJointParameters {
+            anchor 0 0 0
+            axis 0 0 -1
+        }
         device [
-          RotationalMotor {
+            RotationalMotor {
             name "crank_motor"
             maxVelocity 10
-          }
-          PositionSensor {
+            }
+            PositionSensor {
             name "crank_sensor"
-          }
+            }
         ]
-
-        endPoint Crank {
-          color IS crankColor
+        endPoint Crank {}
         }
-      }
-
     ]
   }
 }

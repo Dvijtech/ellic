@@ -3,16 +3,18 @@
 PROTO Frame [
   field SFColor color 0.2 0.8 0.8
   field SFVec3f translation 0 0 0
+  field SFRotation rotation 0 0 1 0
 ]
 {
   Solid {
     name "frame"
 
     translation IS translation
+    rotation IS rotation
 
     children [
       Transform {
-        rotation 0 0 1 0.527  # ~30.2°
+        translation 0.4085 0 0   # половина длины, чтобы начало было в (0,0,0)
 
         children [
           Shape {
