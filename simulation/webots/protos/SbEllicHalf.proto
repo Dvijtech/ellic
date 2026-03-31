@@ -2,11 +2,11 @@
 
 EXTERNPROTO "Frame.proto"
 EXTERNPROTO "Crank.proto"
-EXTERNPROTO "Rod_A.proto"
+
 
 PROTO SbEllicHalf [
-#  field SFColor frameColor 0.8 0.8 0.8
-#  field SFColor crankColor 0.2 0.2 0.2
+  field SFColor frameColor 0.8 0.8 0.8
+  field SFColor crankColor 0.2 0.2 0.2
 ]
 {
   Robot {
@@ -37,33 +37,11 @@ PROTO SbEllicHalf [
           }
         ]
 
-          endPoint Solid {
-            name "crank_with_rod"
-
-            children [
-
-            # === сам crank ===
-            Crank {
-                color IS crankColor
-            }
-
-            # === соединение crank → Rod_A ===
-            HingeJoint {
-                jointParameters HingeJointParameters {
-                anchor 0.175 0 0   # конец кривошипа (если 0.175 длина)
-                axis 0 0 1
-                }
-
-                endPoint Rod_A {
-                }
-            }
-        ]
-
-            physics Physics {
-            mass 0.2
-            density -1
-            }
+        endPoint Crank {
+          color IS crankColor
         }
-    }]
+      }
+
+    ]
   }
 }

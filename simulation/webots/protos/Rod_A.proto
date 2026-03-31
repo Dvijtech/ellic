@@ -10,6 +10,7 @@ PROTO Rod_A [
     children [
       Transform {
         translation 0.125 0 0
+        rotation 0 0 1 0.3
 
         children [
           Shape {
