@@ -3,15 +3,14 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
+
 EXTERNPROTO "../protos/SbEllicHalf.proto"
-EXTERNPROTO "../protos/Frame.proto"
-EXTERNPROTO "../protos/Crank.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.593906774675596 0.5427239759590389 0.5939069194020588 2.147117909571644
-  position -7.842353526502751e-05 -7.842375662271952e-05 1.4003826427685842
+  orientation -0.5773502691896258 0.5773502691896258 0.5773502691896258 2.0944
+  position 5.21662818199989e-13 5.216642736699678e-13 2.8261770740179744
 }
 TexturedBackground {
 }
@@ -21,5 +20,5 @@ Floor {
   contactMaterial ""
 }
 SbEllicHalf {
-}
 
+}

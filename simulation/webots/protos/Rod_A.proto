@@ -1,14 +1,15 @@
 #VRML_SIM R2023b utf8
 
-PROTO Crank [
-  field SFColor color 0.8 0.2 0.2
+PROTO Rod_A [
+  field SFColor color 0.9 0.6 0.2
 ]
 {
   Solid {
-    name "crank"
+    name "Rod_A"
+
     children [
       Transform {
-        translation 0.0875 0 0
+        translation 0.125 0 0
 
         children [
           Shape {
@@ -18,7 +19,7 @@ PROTO Crank [
               }
             }
             geometry Box {
-              size 0.175 0.01 0.01
+              size 0.25 0.01 0.01
             }
           }
         ]
@@ -26,11 +27,11 @@ PROTO Crank [
     ]
 
     boundingObject Box {
-      size 0.175 0.01 0.01
+      size 0.25 0.01 0.01
     }
 
     physics Physics {
-      mass 0.2
+      mass 0.3
       density -1
     }
   }
