@@ -4,13 +4,11 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
 
-EXTERNPROTO "../protos/SbEllicHalf.proto"
-
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.5773502691896258 0.5773502691896258 0.5773502691896258 2.0944
-  position 5.21662818199989e-13 5.216642736699678e-13 2.8261770740179744
+  orientation 0.5925201950556798 -0.564693490786129 -0.5744920190176319 3.929545166976806
+  position 0.473010268483696 -0.32225586544193624 0.6709476894225451
 }
 TexturedBackground {
 }
@@ -19,6 +17,157 @@ TexturedBackgroundLight {
 Floor {
   contactMaterial ""
 }
-SbEllicHalf {
-
+Robot {
+  translation 0 -0.24 0
+  children [
+    Solid {
+      translation 0 0 -0.00031368734672852766
+      rotation 0 0 1 0.5269999999999996
+      children [
+        Pose {
+          translation 0.4085 0 0
+          children [
+            Shape {
+              appearance Appearance {
+                material Material {
+                  diffuseColor 0.2 0.8 0.8
+                }
+              }
+              geometry Box {
+                size 0.817 0.03 0.03
+              }
+            }
+          ]
+        }
+      ]
+      name "frame"
+      boundingObject Box {
+        size 0.817 0.03 0.03
+      }
+      physics Physics {
+        density -1
+        mass 5
+      }
+      linearVelocity 0 0 -6.059644859306663e-07
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        position 855.2616354335785
+        axis 0 0 -1
+      }
+      device [
+        RotationalMotor {
+          name "crank_motor"
+        }
+        PositionSensor {
+          name "crank_sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0.0034307291579182718 0.00023532000830132015 -8.224165108121548e-06
+        rotation 0 0 -1 0.7378481721548413
+        children [
+          HingeJoint {
+            jointParameters HingeJointParameters {
+              position -10.083974526647529
+            }
+            endPoint Solid {
+              translation 0.16999999999999996 -0.037965896057772744 0.012593281404399548
+              rotation 0.9912053203086538 0.1304919372504338 -0.02199698398525976 2.810477823503384
+              children [
+                HingeJoint {
+                  endPoint Solid {
+                    translation 0.009999 3.7233e-06 0
+                    rotation 0.9999999999894812 4.52684456449023e-06 7.383534630621218e-07 0.3234162006263474
+                    children [
+                      Pose {
+                        translation 0.1 0 0
+                        rotation 0 0 1 -0.5
+                        children [
+                          Shape {
+                            appearance Appearance {
+                              material Material {
+                                diffuseColor 0.2 0.8 0.4
+                              }
+                            }
+                            geometry Box {
+                              size 0.2 0.01 0.01
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                    name "Rod_B"
+                    boundingObject Box {
+                      size 0.2 0.01 0.01
+                    }
+                    physics Physics {
+                      density -1
+                      mass 0.2
+                    }
+                  }
+                }
+                Pose {
+                  translation 0.125 0 0
+                  rotation 0 0 1 0.3
+                  children [
+                    Shape {
+                      appearance Appearance {
+                        material Material {
+                          diffuseColor 0.9 0.6 0.2
+                        }
+                      }
+                      geometry Box {
+                        size 0.25 0.01 0.01
+                      }
+                    }
+                  ]
+                }
+              ]
+              name "Rod_A"
+              boundingObject Box {
+                size 0.25 0.01 0.01
+              }
+              physics Physics {
+                density -1
+                mass 0.3
+              }
+              linearVelocity -0.00016597759814098974 -0.00012100888197289671 -1.381299198727845e-08
+              angularVelocity 2.741466911376576e-07 -2.486016935209866e-07 -0.0011670851464746464
+            }
+          }
+          Pose {
+            translation 0.0875 0 0
+            children [
+              Shape {
+                appearance Appearance {
+                  material Material {
+                    diffuseColor 0.8 0.2 0.2
+                  }
+                }
+                geometry Box {
+                  size 0.175 0.01 0.01
+                }
+              }
+            ]
+          }
+        ]
+        name "crank"
+        boundingObject Pose {
+          translation 0.0875 0 0
+          children [
+            Box {
+              size 0.175 0.01 0.01
+            }
+          ]
+        }
+        physics Physics {
+          mass 0.2
+        }
+        linearVelocity -6.84207206990095e-05 -7.956556976978391e-05 1.3758885586412361e-10
+        angularVelocity 1.544375973384469e-10 1.702563830415433e-10 -0.00116708499937172
+      }
+    }
+  ]
+  controller "ellic_controller"
 }
