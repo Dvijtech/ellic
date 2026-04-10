@@ -40,7 +40,13 @@ Ellic explores several engineering directions:
 
 The platform is designed as a **testbed for new locomotion ideas**.
 
-![battle](media/battle.gif)
+<table> 
+  <tr> 
+   <td> <img src="media/battle.gif" height="400"> </td> 
+  </tr> 
+</table>
+
+
 ---
 
 # CURRENT PROTOTYPE MECHANISM
@@ -62,7 +68,14 @@ Potential advantages being explored:
 
 This repository documents the design and experiments.
 
-![turning model](media/Povorot_model_Solid2.gif)
+<table>
+  <tr>
+    <td><img src="media/Povorot_model_Solid2.gif" height="320"></td>
+    <td><img src="media/viewObves.gif" height="320"></td>
+  </tr>
+</table>
+
+![turning model]()
 
 - human rider platform
 - electric drive
