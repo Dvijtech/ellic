@@ -75,7 +75,6 @@ This repository documents the design and experiments.
   </tr>
 </table>
 
-![turning model]()
 
 - human rider platform
 - electric drive
@@ -85,23 +84,19 @@ This repository documents the design and experiments.
 
 The machine is designed as a **research platform**, not a finished product.
 
-
-
 ---
 
 # Repository Structure
 
-# 📁 Структура репозитория
+# 📁 This repository contains all materials related to the Ellic platform.
 
-This repository contains all materials related to the Ellic platform.
-
-## 🔧 Основные компоненты
+## 🔧 Main components
 - **⚙️ cad/** – Mechanical CAD models of the locomotion system
 - **📄 docs/** – Documentation and manuals
 - **🎬 media/** – Videos, renders and animations of the machine
 - **📟 firmware/** – Embedded control software (ESP32 based)
 
-## 🧪 Экспериментальные направления
+## 🧪 Experimental directions
 - **🤖 ros/** – Robot Operating System experiments, URDF models and Gazebo simulations
 - **📊 simulation/** – Locomotion simulation experiments
 - **🥽 vr/** – Virtual reality integration experiments
@@ -112,7 +107,7 @@ This repository contains all materials related to the Ellic platform.
 
  ![VR experiment](media/para_girl.gif)
 
-## 📚 Исследования и сообщество
+## 📚 Research and Community
 - **📝 research/** – Engineering notes and mechanism research
 - **👥 community/** – Community related materials
 - **🧪 CHEMP/** – Experimental research directions
