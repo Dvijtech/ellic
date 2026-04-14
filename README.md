@@ -102,6 +102,8 @@ VR-гарнитура для проведения битвы мехботов в
 
  ![VR experiment](media/para_girl.gif)
 
+[История проекта здесь](docs/history/ellicDevHistory.md).
+
 ---
 
 ## 6. 👥 Community [community/](community/)
@@ -165,9 +167,7 @@ VR-гарнитура для проведения битвы мехботов в
 
 [**MANUAL**](docs/Manual_EllicV14_EN.pdf)
 
-[ELLIC-14](docs/history/ellicDevHistory.md) founder prototype edition.
-
-Также команды могут строить мехботов самостоятельно. При необходимости мы можем предоставить отдельные сложные детали (рамы, тяги, рычаги) 🏗️  
+Команды могут строить мехботов самостоятельно. При необходимости мы можем предоставить отдельные сложные детали (рамы, тяги, рычаги) 🏗️  
 [cad/BUILD_ONE](cad/BUILD_ONE.md) 
 ---
 
