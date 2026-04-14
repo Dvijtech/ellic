@@ -1,97 +1,19 @@
-# Looking for the first 3 teams
-
-If you want to become one of the founders of mech sport
-
 [START_A_TEAM](START_A_TEAM.md)
 
-[BUILD_ONE](BUILD_ONE.md)
 
 
 
-# ELLIC
-
-### Open Locomotion Platform
-
-**Ellic** is an open research platform exploring a new type of **human-scale locomotion machine**.
-
-The project investigates an **elliptical walking mechanism** that allows a rider to move using a mechanical stepping trajectory instead of wheels.
-
-Ellic sits somewhere between:
-
-- a scooter
-- a robotic walking machine
-- an experimental exoskeleton vehicle
-
-The goal is to create a **replicable open hardware locomotion platform** for robotics research, engineering experiments, and future competitive mech sports.
-
-![walking prototype](media/Luka_right_view.gif)
-
----
-
-# What This Project Explores
-
-Ellic explores several engineering directions:
-
-• human-scale locomotion mechanisms  
-• mechanical walking kinematics  
-• robotic control systems  
-• VR-linked locomotion interfaces  
-• experimental personal mobility  
-
-The platform is designed as a **testbed for new locomotion ideas**.
-
-<table> 
-  <tr> 
-   <td> <img src="media/battle.gif" height="400"> </td> 
-  </tr> 
-</table>
-
-
----
-
-# CURRENT PROTOTYPE MECHANISM
 
 ## Models are here: [FUSION 360, STEP, STL](cad)
 
-### description [cad/MECHANISM.md](cad/MECHANISM.md)
-
-The current prototype uses an **elliptical walking linkage**.
-
-Instead of rolling wheels, the mechanism generates a smooth **step trajectory** using rotating mechanical links.
-
-Potential advantages being explored:
-
-- stable step trajectory
-- human-scale walking feel
-- compatibility with robotic control
-- unusual maneuverability
-
-This repository documents the design and experiments.
-
-<table>
-  <tr>
-    <td><img src="media/Povorot_model_Solid2.gif" height="320"></td>
-    <td><img src="media/viewObves.gif" height="320"></td>
-  </tr>
-</table>
+### description 
 
 
-- human rider platform
-- electric drive
-- elliptical walking linkage
-- electronic control system
-- experimental VR interface
 
-The machine is designed as a **research platform**, not a finished product.
 
----
-
-# Repository Structure
-
-# 📁 This repository contains all materials related to the Ellic platform.
 
 ## 🔧 Main components
-- **⚙️ cad/** – Mechanical CAD models of the locomotion system
+
 - **📄 docs/** – Documentation and manuals
 - **🎬 media/** – Videos, renders and animations of the machine
 - **📟 firmware/** – Embedded control software (ESP32 based)
@@ -101,9 +23,8 @@ The machine is designed as a **research platform**, not a finished product.
 - **📊 simulation/** – Locomotion simulation experiments
 - **🥽 vr/** – Virtual reality integration experiments
 
-![VR experiment](media/VRELLIC.gif)
 
-- **🦿 exoskeleton/** – Concept work on rider-linked mechanisms
+
 
  ![VR experiment](media/para_girl.gif)
 
@@ -111,118 +32,230 @@ The machine is designed as a **research platform**, not a finished product.
 - **📝 research/** – Engineering notes and mechanism research
 - **👥 community/** – Community related materials
 - **🧪 CHEMP/** – Experimental research directions
-- **⚛️ HEPMC/** – Experimental research directions
 
 
-The goal is to make the **mechanism understandable and eventually replicable**.
-
----
-
-# Control System
-
-The platform uses embedded control based on **ESP32 microcontrollers**.
-
-Current experiments include:
-
-- drive control
-- BLE interfaces
-- gamepad / VR control
-- locomotion feedback systems
 
 Firmware sources are located in:
 [Arduino style code](firmware/ESP32ELLIC)
 
----
-
-# Robotics Simulation Experiments
-Files are located in:
-ros/
-
-Experiments include:
-
-- ROS robot description
-- URDF models
-- Gazebo simulation
-- locomotion analysis
-
-Simulation tools are used to explore:
-- walking kinematics
-- stability
-- control strategies
-Experiments are located in:
-simulation/
-
-
-The Ellic platform is being explored as a **robotics research platform MECHSPORT & PARAMECHSPORT**.
-
----
-# VR Interaction
-
-Another direction of research is **VR-linked locomotion**.
-
-The idea is to connect physical locomotion to digital environments.
-
-Experiments include:
-
-- VR locomotion interfaces
-- game control integration
-- hybrid physical-virtual gameplay
-
-Files are located in:
-
-vr/
 
 
 ![VR experiment](media/VRBOT.gif)
 
----
-
-# Long-Term Vision
-
-The long-term vision is larger than a single machine.
-
-Ellic aims to become an **open locomotion platform**.
-
-Possible future stages:
-
-1. Open hardware locomotion platform
-2. Independent builder machines
-3. Experimental competitions
-4. Hybrid physical-VR matches
-5. A global **Mech Sport League**
-
-The idea is similar to how motorsport grew from early experimental machines.
-
----
-
-# Founder Machines
-
-We have a small batch of **early assembled Ellic machines**
 [ELLIC-14](docs/history/ellicDevHistory.md) founder prototype edition.
 
-These machines are intended for:
-
-- robotics teams
-- research groups
-- experimental sports teams
-- XR developers
-
-Estimated price:
 
 [**$20,000**](docs/2022-10-10_EN_Инструкция_эксплуатации_Ellic.pdf)
 
-Founder teams would:
-
-- receive a working machine
-- skip early engineering work
-- experiment with control systems
-- participate in the first mech competitions
-
----
 
 [START_A_TEAM](START_A_TEAM.md)
 
 [BUILD_ONE](BUILD_ONE.md)
+
+
+# ELLIC 🚶‍♂️🤖
+
+Мы делаем экспериментальный формат медиалиги мех-спорта, где команды строят человекоуправляемые машины и участвуют в боях в дополненной реальности ⚔️
+
+<table> 
+  <tr> 
+   <td> <img src="media/battle.gif" height="400"> </td> 
+  </tr> 
+</table>
+
+Как BattleBots, только ты внутри мехбота 🤯  
+Ты ходишь в механическом экзоскелете и дерёшься в AR.
+
+![VR experiment](media/VRELLIC.gif)
+
+Это смесь спорта, игры и инженерного челленджа 🎮⚙️
+
+Это открытый инженерный эксперимент 🔬
+
+Для создания мехботов используется платформа ELLIC, где пилот шагает внутри машины, а сам мехбот по цене сопоставим с электровелосипедом 🚲  
+
+<table>
+  <tr>
+    <td><img src="media/viewObves.gif" height="320"></td>
+    <td><img src="media/Povorot_model_Solid2.gif" height="320"></td>
+  </tr>
+</table>
+
+
+В этом репозитории выложены наши разработки, необходимые для создания своего мехбота, и описан экспериментальный формат соревнований в дополненной реальности 📦  
+
+---
+
+## 🧩 Платформа состоит из трёх составляющих:
+
+---
+
+### 1. ⚙️ Физическая
+
+За основу взят эллипс из тренажёрного зала, поставлен на колёса — теперь в нём можно шагать и кататься 🏃‍♂️
+
+![walking prototype](media/Luka_right_view.gif)
+
+В - **папке ⚙️ [cad/](cad/)** :
+- [cad/MECHANISM.md](cad/MECHANISM.md) — описание устройства  
+- [BUILD_ONE](BUILD_ONE.md)  — описание сборки  
+
+Содержимое репозитория:
+- a. В репозитории представлены модели Ellic в формате Fusion, SolidWorks, STEP  
+- b. В папке **Дизайн** представлена модель фронтального обвеса мехбота  
+- c. По запросу может быть предоставлена документация для сборки в формате ЕСКД 📄  
+- d. Weapon 🔫  
+  - виртуальные орудия (как сейчас)  
+  - планируются пневматические пушки, стреляющие безопасными снарядами (например, для бассейна) 💦  
+  - возможны роборуки для манипуляций, предусмотренных правилами 🤖  
+
+---
+
+### 2. 🔌 Электронная
+
+- моторы, помогающие движению ⚡  
+- датчики момента (усилия на рычагах)  
+- энкодер положения вала  
+- датчики тока  
+- джойстик 🎮  
+- система управления (ESP32)  
+
+Содержимое репозитория:
+- a. Исходный код прошивки для управления моторами с джойстика 💻  
+
+---
+
+### 3. 🥽 VR / AR
+
+VR-гарнитура для проведения битвы мехботов в формате дополненной реальности — с виртуальным или реальным противником 👾  
+
+Содержимое репозитория:
+- a. Исходный код на Unreal Engine 5.3 (в `.zip`)  
+- b. `.apk` для PICO 4 (AR, технология see-through)  
+  - бой с виртуальным противником  
+  - стрельба ведётся тем же джойстиком, что управляет скутером 🔫  
+- c. Папка **Чемп** — проект правил соревнований и безопасности 📜  
+
+---
+
+### 4. 🤖 Моделирование
+
+Разделы для моделирования в среде:
+- ROS  
+- URDF  
+- Webots  
+
+Пока там только тесты и ничего финального 🧪  
+
+---
+
+### 5. 🔬 Research
+
+Материалы исследований по разным направлениям:
+- a. Отчёт по гранту Фонда содействия инновациям  
+- b. Медицинские исследования и гипотезы 🧠  
+
+---
+
+### 6. 👥 Community
+
+- принципы формирования команд  
+- причины участвовать в медиачемпионате  
+
+---
+
+## ❓ Зачем тебе сюда
+
+- хочешь построить меха → тебе сюда 🤖  
+- хочешь участвовать в шоу → тебе сюда 🎬  
+- хочешь просто играть → пока рано ⏳  
+
+---
+
+## ❗ Будет сложно, но мы поможем
+
+В командах приветствуются навыки и оборудование:
+
+- Производство медиаконтента 🎥  
+- Знание Unreal Engine или Unity (как плюс, но не обязательно 🎮)  
+- Геймдизайн  
+- Работа с металлом (резка, сверление, сварка, лазер, гибка), механическая сборка 🔩  
+- ESP32 или аналоги  
+- знание велокомпонентов (как плюс 🚴)  
+
+---
+
+## ⚠️ Безопасность
+
+Мы тестируем систему и вводим правила безопасности, но это всё ещё экспериментальная техника ⚠️  
+
+Всегда тестируйте:
+- на низкой скорости  
+- с доступной аварийной остановкой 🛑  
+
+---
+
+Это первый прототип реального мехспорта, и нет гарантии, что всё сразу будет работать идеально, но если это сработает хотя бы частично, вы получите:
+
+- опыт создания реального мехбота: механика, электроника и интеграция с VR 🤖  
+- эмоции от управления реальным мехом в бою 🔥  
+- место в создании нового медиапродукта на стыке MEDIA – STEM – VR 🚀  
+
+---
+
+## 🎯 Цель
+
+Сформировать до 1 июля 2026 года 3–4 команды и провести экспериментальный медиачемпионат битвы мехботов:
+
+- чемпионат на вылет  
+- 2 меха на спортивной площадке  
+- бой в дополненной реальности  
+- параллельная трансляция:  
+  - физического мира  
+  - AR-сцены 📡  
+
+Мы можем предоставить готовые машины для соревнований. Машины могут быть доработаны командами по согласованному регламенту (мы за интересный и зрелищный движ) 😎  
+
+Также команды могут строить мехботов самостоятельно. При необходимости мы можем предоставить отдельные сложные детали (рамы, тяги, рычаги) 🏗️  
+
+---
+
+## 🚀 Как вписаться без боли
+
+**Быстрый вход (без сборки меха):**
+
+- мы даём готовые машины  
+- можно прийти и тестировать  
+- можно просто участвовать как пилот 🧑‍🚀  
+- можно зайти как команда без инженерки  
+
+Смотри подробнее в `start_a_team.md` 📄  
+
+---
+
+## 🎁 Что ты реально получишь
+
+- участие в первом прототипе мехспорта  
+- видео / медиа с боя 🎥  
+- опыт пилотирования меха  
+- возможность стать частью команды-основателя 🤝  
+
+---
+
+## 📫 Контакты
+
+Я — Дмитрий Логунов. Раньше занимался автоматизацией в госсекторе и промышленности. Несколько лет со своими сыновьями я делаю Ellic — платформу, на которой человек шагает внутри машины 🤖  
+
+Это не идеальная система и не готовый продукт, а живая разработка, которую мы ведём прямо сейчас 🔧  
+
+Проект развивается в рамках ООО «Движ.Тех» — небольшой компании, занимающейся образовательной робототехникой и экспериментальными платформами 🏢  
+
+Проект поддержан Фондом содействия инновациям 💡  
+
+📧 dselog@gmail.com
+
+
+
 
 
 <a href="https://github.com/yourusername/yourrepo/stargazers" target="_blank" style="text-decoration:none;">
