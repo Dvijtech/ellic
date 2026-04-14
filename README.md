@@ -1,8 +1,3 @@
-[START_A_TEAM](START_A_TEAM.md)
-
-
-
-
 
 ## Models are here: [FUSION 360, STEP, STL](cad)
 
@@ -16,41 +11,37 @@
 
 - **📄 docs/** – Documentation and manuals
 - **🎬 media/** – Videos, renders and animations of the machine
-- **📟 firmware/** – Embedded control software (ESP32 based)
+-  – Embedded control software (ESP32 based)
 
 ## 🧪 Experimental directions
 - **🤖 ros/** – Robot Operating System experiments, URDF models and Gazebo simulations
-- **📊 simulation/** – Locomotion simulation experiments
+- ** – Locomotion simulation experiments
 - **🥽 vr/** – Virtual reality integration experiments
 
 
 
 
- ![VR experiment](media/para_girl.gif)
 
 ## 📚 Research and Community
-- **📝 research/** – Engineering notes and mechanism research
+-  – Engineering notes and mechanism research
 - **👥 community/** – Community related materials
 - **🧪 CHEMP/** – Experimental research directions
 
 
 
 Firmware sources are located in:
-[Arduino style code](firmware/ESP32ELLIC)
 
 
 
-![VR experiment](media/VRBOT.gif)
-
-[ELLIC-14](docs/history/ellicDevHistory.md) founder prototype edition.
 
 
-[**$20,000**](docs/2022-10-10_EN_Инструкция_эксплуатации_Ellic.pdf)
+
+
 
 
 [START_A_TEAM](START_A_TEAM.md)
 
-[BUILD_ONE](BUILD_ONE.md)
+
 
 
 # ELLIC 🚶‍♂️🤖
@@ -86,19 +77,19 @@ Firmware sources are located in:
 
 ---
 
-## 🧩 Платформа состоит из трёх составляющих:
+# 🧩 Платформа состоит из трёх составляющих:
 
 ---
 
-### 1. ⚙️ Физическая
+## 1. ⚙️ Физическая платформа. Модели и рабочая документация собраны в ⚙️ [cad/](cad/)
 
 За основу взят эллипс из тренажёрного зала, поставлен на колёса — теперь в нём можно шагать и кататься 🏃‍♂️
 
 ![walking prototype](media/Luka_right_view.gif)
 
-В - **папке ⚙️ [cad/](cad/)** :
+:
 - [cad/MECHANISM.md](cad/MECHANISM.md) — описание устройства  
-- [BUILD_ONE](BUILD_ONE.md)  — описание сборки  
+- [cad/BUILD_ONE](cad/BUILD_ONE.md)  — описание сборки  
 
 Содержимое репозитория:
 - a. В репозитории представлены модели Ellic в формате Fusion, SolidWorks, STEP  
@@ -111,7 +102,7 @@ Firmware sources are located in:
 
 ---
 
-### 2. 🔌 Электронная
+## 2. 🔌 Электроника. Управляющее программное обеспечение в 📟 [firmware/](firmware/)
 
 - моторы, помогающие движению ⚡  
 - датчики момента (усилия на рычагах)  
@@ -125,9 +116,11 @@ Firmware sources are located in:
 
 ---
 
-### 3. 🥽 VR / AR
+ ## 3. 🥽 VR / AR лежит здесь: [VR/](https://github.com/loguluk/ELLIC)
 
 VR-гарнитура для проведения битвы мехботов в формате дополненной реальности — с виртуальным или реальным противником 👾  
+
+![VR experiment](media/VRBOT.gif)
 
 Содержимое репозитория:
 - a. Исходный код на Unreal Engine 5.3 (в `.zip`)  
@@ -138,33 +131,34 @@ VR-гарнитура для проведения битвы мехботов в
 
 ---
 
-### 4. 🤖 Моделирование
+### 4. 🤖 Моделирование 📊 simulation/
 
 Разделы для моделирования в среде:
 - ROS  
 - URDF  
 - Webots  
 
-Пока там только тесты и ничего финального 🧪  
+Пока там только первые тесты и ничего финального 🧪  
 
 ---
 
-### 5. 🔬 Research
+## 5. 🔬 Research 📝 [research/](research/) 
 
 Материалы исследований по разным направлениям:
 - a. Отчёт по гранту Фонда содействия инновациям  
-- b. Медицинские исследования и гипотезы 🧠  
+- b. Медицинские исследования и гипотезы 🧠
+
+ ![VR experiment](media/para_girl.gif)
 
 ---
 
-### 6. 👥 Community
+## 6. 👥 Community [community/](community/)
 
-- принципы формирования команд  
-- причины участвовать в медиачемпионате  
+[START_A_TEAM](community/START_A_TEAM.md) - принципы формирования и вознаграждения команд медачемпионата
 
 ---
 
-## ❓ Зачем тебе сюда
+# ❓ Зачем тебе сюда
 
 - хочешь построить меха → тебе сюда 🤖  
 - хочешь участвовать в шоу → тебе сюда 🎬  
@@ -185,7 +179,7 @@ VR-гарнитура для проведения битвы мехботов в
 
 ---
 
-## ⚠️ Безопасность
+## ⚠️ Безопасность [chemp/Safety_rules.pdf](chemp/Safety_rules.pdf)
 
 Мы тестируем систему и вводим правила безопасности, но это всё ещё экспериментальная техника ⚠️  
 
@@ -206,6 +200,7 @@ VR-гарнитура для проведения битвы мехботов в
 ## 🎯 Цель
 
 Сформировать до 1 июля 2026 года 3–4 команды и провести экспериментальный медиачемпионат битвы мехботов:
+проект правил здесь [chemp/](chemp/)
 
 - чемпионат на вылет  
 - 2 меха на спортивной площадке  
@@ -216,8 +211,11 @@ VR-гарнитура для проведения битвы мехботов в
 
 Мы можем предоставить готовые машины для соревнований. Машины могут быть доработаны командами по согласованному регламенту (мы за интересный и зрелищный движ) 😎  
 
-Также команды могут строить мехботов самостоятельно. При необходимости мы можем предоставить отдельные сложные детали (рамы, тяги, рычаги) 🏗️  
+[**MANUAL**](docs/Manual_EllicV14_EN.pdf)
+[ELLIC-14](docs/history/ellicDevHistory.md) founder prototype edition.
 
+Также команды могут строить мехботов самостоятельно. При необходимости мы можем предоставить отдельные сложные детали (рамы, тяги, рычаги) 🏗️  
+[cad/BUILD_ONE](cad/BUILD_ONE.md) 
 ---
 
 ## 🚀 Как вписаться без боли
@@ -229,7 +227,7 @@ VR-гарнитура для проведения битвы мехботов в
 - можно просто участвовать как пилот 🧑‍🚀  
 - можно зайти как команда без инженерки  
 
-Смотри подробнее в `start_a_team.md` 📄  
+Смотри подробнее в [community/START_A_TEAM](community/START_A_TEAM.md) 📄  
 
 ---
 
