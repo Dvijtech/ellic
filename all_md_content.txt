@@ -1,0 +1,1168 @@
+﻿=== README.md ===
+# 🤖 ELLIC 🚶‍♂️
+
+Мы делаем экспериментальный формат медиалиги мех-спорта, где команды строят человекоуправляемые машины и участвуют в боях в дополненной реальности ⚔️
+
+<table> 
+  <tr> 
+   <td> <img src="media/battle.gif" height="400"> </td> 
+  </tr> 
+</table>
+
+Как BattleBots, только ты внутри мехбота 🤯  
+Ты ходишь в механическом экзоскелете и дерёшься в AR.
+
+![VR experiment](media/VRELLIC.gif)
+
+🔬 Это открытый инженерный эксперимент - смесь спорта, игры и инженерного челленджа 🎮⚙️
+
+Для создания мехботов используется платформа ELLIC, где пилот шагает внутри машины, а сам мехбот по цене сопоставим с электровелосипедом 🚲  
+
+<table>
+  <tr>
+    <td><img src="media/viewObves.gif" height="320"></td>
+    <td><img src="media/Povorot_model_Solid2.gif" height="320"></td>
+  </tr>
+</table>
+
+
+В этом репозитории выложены наши разработки, необходимые для создания своего мехбота, и описан экспериментальный формат соревнований в дополненной реальности 📦  
+
+---
+
+# 🧩 Платформа состоит из трёх составляющих:
+
+---
+
+## 1. ⚙️ Физическая платформа. Модели и рабочая документация собраны в ⚙️ [cad/](cad/)
+
+За основу взят эллипс из тренажёрного зала, поставлен на колёса — теперь в нём можно шагать и кататься 🏃‍♂️
+
+![walking prototype](media/Luka_right_view.gif)
+
+- [cad/MECHANISM.md](cad/MECHANISM.md) — описание устройства
+  
+- [cad/BUILD_ONE](cad/BUILD_ONE.md)  — описание сборки  
+
+Содержимое репозитория:
+- a. В репозитории представлены модели Ellic версии 14 в формате Fusion, SolidWorks, STEP  
+- b. В папке **Дизайн** представлена модель фронтального обвеса мехбота  
+- c. По запросу может быть предоставлена документация для сборки в формате ЕСКД 📄  
+- d. Weapon 🔫  
+  - виртуальные орудия (как сейчас)  
+  - планируются пневматические пушки, стреляющие безопасными снарядами (например, для бассейна) 💦  
+  - возможны роборуки для манипуляций, если мы придумаем для них правила 🤖  
+
+---
+
+## 2. 🔌 Электроника. Управляющее программное обеспечение в 📟 [firmware/](firmware/)
+
+- моторы, помогающие движению ⚡  
+- датчики момента (усилия на рычагах)  
+- энкодер положения вала  
+- датчики тока  
+- джойстик 🎮  
+- система управления (ESP32)  
+
+Содержимое репозитория:
+- a. Исходный код прошивки для управления моторами с джойстика 💻  
+
+---
+
+ ## 3. 🥽 [VR / AR лежит здесь:](https://github.com/loguluk/ELLIC)
+
+VR-гарнитура для проведения битвы мехботов в формате дополненной реальности — с виртуальным или реальным противником 👾  
+
+![VR experiment](media/VRBOT.gif)
+
+Содержимое репозитория:
+- a. Исходный код на Unreal Engine 5.3 (в `.zip`)  
+- b. `.apk` для PICO 4 (AR, технология see-through)  
+  - бой с виртуальным противником  
+  - стрельба ведётся тем же джойстиком, что управляет скутером 🔫  
+- c. Папка **Чемп** — проект правил соревнований и безопасности 📜  
+
+---
+
+## Прочие материалы
+
+## 🤖 Моделирование 📊 simulation/
+
+Разделы для моделирования в среде:
+- ROS  
+- URDF  
+- Webots  
+
+Пока там только первые тесты и ничего финального 🧪  
+
+---
+
+## 🔬 Research 📝 [research/](research/) 
+
+Материалы исследований по разным направлениям:
+- a. Отчёт по гранту Фонда содействия инновациям  
+- b. Медицинские исследования и гипотезы 🧠
+
+ ![VR experiment](media/para_girl.gif)
+
+[История проекта здесь](docs/history/ellicDevHistory.md).
+
+---
+
+## 👥 Community [community/](community/)
+
+[START_A_TEAM](community/START_A_TEAM.md) - принципы формирования и вознаграждения команд медачемпионата
+
+---
+
+# ❓ Зачем тебе сюда
+
+- хочешь построить меха → тебе сюда 🤖  
+- хочешь участвовать в шоу → тебе сюда 🎬  
+- хочешь просто играть → пока рано ⏳  
+
+---
+
+# ❗ Будет сложно, но мы поможем
+
+В командах приветствуются навыки и оборудование:
+
+- Производство медиаконтента 🎥  
+- Знание Unreal Engine или Unity (как плюс, но не обязательно 🎮)  
+- Геймдизайн  
+- Работа с металлом (резка, сверление, сварка, лазер, гибка), механическая сборка 🔩  
+- ESP32 или аналоги  
+- знание велокомпонентов (как плюс 🚴)  
+
+---
+
+## ⚠️ Безопасность [chemp/Safety_rules.pdf](CHEMP/Safety_rules.pdf)
+
+Мы тестируем систему и вводим правила безопасности, но это всё ещё экспериментальная техника ⚠️  
+
+Всегда тестируйте:
+- на низкой скорости  
+- с доступной аварийной остановкой 🛑  
+
+---
+
+Это первый прототип реального мехспорта, и нет гарантии, что всё сразу будет работать идеально, но если это сработает хотя бы частично, вы получите:
+
+- опыт создания реального мехбота: механика, электроника и интеграция с VR 🤖  
+- эмоции от управления реальным мехом в бою 🔥  
+- место в создании нового медиапродукта на стыке MEDIA – STEM – VR 🚀  
+
+---
+
+# 🎯 Цель
+
+Сформировать до 1 июля 2026 года 3–4 команды и провести экспериментальный медиачемпионат битвы мехботов:
+проект правил здесь [chemp/](CHEMP/)
+
+- чемпионат на вылет  
+- 2 меха на спортивной площадке  
+- бой в дополненной реальности  
+- параллельная трансляция:  
+  - физического мира  
+  - AR-сцены 📡  
+
+Мы можем предоставить готовые машины для соревнований. Машины могут быть доработаны командами по согласованному регламенту (мы за интересный и зрелищный движ) 😎  
+
+[**MANUAL**](docs/Manual_EllicV14_EN.pdf)
+
+Команды могут строить мехботов самостоятельно. При необходимости мы можем предоставить отдельные сложные детали (рамы, тяги, рычаги) 🏗️  
+[cad/BUILD_ONE](cad/BUILD_ONE.md) 
+
+---
+
+## 🚀 Как вписаться без боли
+
+**Быстрый вход (без сборки меха):**
+
+- мы даём готовые машины  
+- можно прийти и тестировать  
+- можно просто участвовать как пилот 🧑‍🚀  
+- можно зайти как команда без инженерки  
+
+Смотри подробнее в [community/START_A_TEAM](community/START_A_TEAM.md) 📄  
+
+---
+
+## 🎁 Что ты реально получишь
+
+- участие в первом прототипе мехспорта  
+- видео / медиа с боя 🎥  
+- опыт пилотирования меха  
+- возможность стать частью команды-основателя 🤝  
+
+---
+
+## 📫 Контакты
+
+Я — Дмитрий Логунов. Раньше занимался автоматизацией в госсекторе и промышленности. Несколько лет со своими сыновьями я делаю Ellic — платформу, на которой человек шагает внутри машины 🤖  
+
+Это не идеальная система и не готовый продукт, а живая разработка, которую мы ведём прямо сейчас 🔧  
+
+Проект развивается в рамках ООО «Движ.Тех» — небольшой компании, занимающейся образовательной робототехникой и экспериментальными платформами 🏢  
+
+Проект поддержан Фондом содействия инновациям 💡  
+
+📧 dselog@gmail.com
+
+
+[START_A_TEAM](START_A_TEAM.md)
+
+
+
+
+<a href="https://github.com/yourusername/yourrepo/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
+
+<a href="https://github.com/yourusername/yourrepo/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
+
+<a href="https://github.com/yourusername/yourrepo/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
+
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/yourusername/yourrepo" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
+
+---
+
+
+=== VISION.md ===
+# ELLIC
+
+### Open Locomotion Platform & Future MechSport League
+
+**Ellic** is an open research platform exploring a new class of human-scale locomotion mechanisms.
+
+Our long-term dream is ambitious:
+
+> Build a global **mech sport league** as exciting and profitable as Formula-style racing — powered by open robotics and human-piloted machines.
+
+The Ellic platform is the first step.
+
+It combines mechanical locomotion, robotics, VR interaction, and competitive gameplay into a new form of sport and engineering culture.
+
+---
+
+![не загрузилось](media/Luka_right_view.gif)
+---
+
+# The Vision
+
+Imagine a new type of championship.
+
+Human pilots ride mechanical walking machines.
+
+Teams design their own vehicles based on a shared open platform.
+
+Matches happen in both **physical arenas and virtual environments**.
+
+Fans follow teams, players, and machines just like traditional motorsport.
+
+There are tournaments, leagues, and world cups.
+
+Collectors trade digital artifacts, machine skins, and historical cards of legendary matches.
+
+Sponsors support teams.
+
+Betting platforms analyze performance.
+
+And millions watch the evolution of a new sport.
+
+That is the long-term vision of the **Ellic MechSport League**.
+
+---
+
+![не загрузилось](media/VRBOT.gif)
+
+---
+
+# Why Open Source?
+
+Great technological cultures grow around **open platforms**.
+
+We believe the fastest way to build a new sport is to let the world participate.
+
+This repository contains the foundations of the Ellic platform:
+
+* locomotion mechanism research
+* CAD models and prototypes
+* control firmware
+* robotics interfaces
+* VR and simulation experiments
+* documentation and engineering notes
+
+Our goal is simple:
+
+**let anyone build, improve, and compete.**
+
+---
+![не загрузилось](media/VRELLIC.gif)
+---
+
+# The Current Prototype
+
+The current experimental machine is an **elliptical walking scooter mechanism**.
+
+It is a compact human-scale locomotion device combining:
+
+* mechanical walking kinematics
+* electric drive
+* robotic control systems
+* interactive VR integration
+
+The design aims to create a new category between:
+
+* scooter
+* exoskeleton
+* robotic vehicle
+
+The result is a **human-piloted locomotion platform**.
+
+![не загрузилось](media/Povorot_model_Solid2.gif)
+---
+
+# The Long-Term Goal
+
+We are not just building a machine.
+
+We are building an **ecosystem**.
+
+Future stages include:
+
+**1. Open Hardware Platform**
+
+Builders around the world replicate and modify the Ellic mechanism.
+
+**2. Experimental Competitions**
+
+Small community tournaments begin to appear.
+
+**3. VR Integrated Matches**
+
+Physical locomotion interacts with digital battle environments.
+
+**4. Team Culture**
+
+Engineering teams design their own machines and strategies.
+
+**5. Media Championship**
+
+A global mech sport league emerges.
+
+![не отразилось](media/paren.gif)
+---
+
+# The Community
+
+This repository is the starting point for a global builder community.
+
+You can participate as:
+
+* teams
+* engineer
+* roboticist
+* designer
+* game developer
+* mechanical builder
+* VR developer
+* sponsor
+* fan
+
+Or simply someone curious about the future of robotics and sport.
+
+---
+
+# What We Share
+
+This repository will gradually include:
+
+* CAD models
+* firmware
+* robotics interfaces
+* VR experiments
+* simulation tools
+* research notes
+* competition ideas
+
+The intention is to **make replication possible**.
+
+If you want to build your own machine — the resources will be here.
+
+---
+
+# How To Join
+
+There are many ways to participate.
+
+### Builders
+
+Try building your own Ellic machine.
+
+### Engineers
+
+Improve the mechanism, firmware, or control systems.
+
+### Game Developers
+
+Help create VR environments and competitive mechanics.
+
+### Researchers
+
+Explore locomotion, biomechanics, and robotics control.
+
+### Media Creators
+
+Document the evolution of the machines.
+
+### Sponsors
+
+Support early tournaments and teams.
+
+---
+
+# Future Competitions
+
+The ultimate goal is to create a new kind of championship.
+
+Possible formats include:
+
+* mech racing
+* arena duels
+* VR combat tournaments
+* team challenges
+* endurance competitions
+
+Each machine, team, and pilot becomes part of the sport’s evolving history.
+
+---
+# Supporting the Project
+
+Developing hardware platforms takes time and resources.
+One way to support the project is to acquire an early assembled Ellic prototype.
+
+We are preparing a small number of fully assembled machines that teams can purchase.
+
+Price: ≈ 1M RUB ($20k) 
+Research machine founder edition 15.
+
+Gettin one allows you to:
+- Save significant engineering time
+- test control immediately
+- develop XR competition concepts
+- bit mythology of the future sport
+
+---
+# Your support to organize comunity competitions.
+
+If you believe in the idea of a new robotic sport:
+
+* star the repository
+* contribute ideas or code
+* share the project
+* support development
+* build your team
+
+Early supporters help shape the foundation of an entirely new competitive ecosystem.
+
+---
+
+# The Beginning
+
+Every major sport began with a few experimental machines and a handful of enthusiasts.
+
+Today motorsport fills stadiums.
+
+Esports fill arenas.
+
+Robotics will follow.
+
+This repository is the beginning of that journey.
+
+If you want to help build the future of mech sport:
+
+**join us.**
+
+=== cad/BUILD_ONE.md ===
+# 🛠️ BUILD ONE ELLIC
+
+### Experimental Build Guide (Real-World Version)
+
+This document describes how a **real Ellic machine is actually built in practice**.
+
+It is not theoretical — it reflects the **actual workflow, tools, and decisions** used during prototyping.
+
+The goal is simple:
+👉 help you understand **what you really need to build one**
+
+
+<table align="center">
+  <tr>
+    <td align="center" valign="middle">
+      <img src="media/VRBOT.gif?v=3" width="100%">
+    </td>
+    <td align="center" valign="middle">
+      <img src="media/battle.gif?v=1" width="100%">
+    </td>
+    <td align="center" valign="middle">
+      <img src="media/VRELLIC.gif?v=2" width="100%">
+    </td>
+  </tr>
+</table>
+
+---
+
+# 🚀 What You Are Building
+
+Ellic is a **human-scale walking machine** driven by an **elliptical linkage mechanism**.
+
+It behaves somewhere between:
+
+- 🛴 a scooter  
+- 🚶 a walking machine  
+- 🤖 a mech-like vehicle  
+
+This is not just transport — it is a **mechanical platform + experimental interface system**.
+
+---
+
+# ⚠️ Important Warning
+
+This is a **mechanically active experimental system**.
+
+Risks include:
+
+- moving linkages ⚙️  
+- structural loads 🏗️  
+- electric drive systems ⚡  
+
+👉 Build only if you understand:
+- mechanical systems
+- basic electronics
+- safe testing practices
+
+Always test:
+- at **low speed**
+- with **support**
+- with **emergency stop ready**
+
+---
+
+# 🧠 How the Build Actually Happens
+
+The build is **not linear engineering perfection**.
+
+In reality, it looks like this:
+
+👉 Mechanics first  
+👉 Parts sourcing in parallel  
+👉 Electronics later  
+👉 Software last  
+
+---
+
+# 🔧 1. Mechanical Fabrication (Core Stage)
+
+This is **80% of the real work**.
+
+### Required tools:
+
+- angle grinder (minimum viable) 🪚  
+- tube cutting + bending tools 🔩  
+- welding setup 🔥  
+- (optional but ideal) laser cutter ✂️  
+
+### Materials:
+
+- steel tubes (main structure)
+- standard bearings (used as-is)
+
+💡 Design principle:
+> Bearings are selected to fit directly into standard tubes  
+(no complex machining required)
+
+---
+
+# ⚙️ 2. 🚲 Bike Components & Machined Parts (Outsourced or DIY)
+
+
+You will need:
+
+- standart bike components
+- simple shafts  
+- connection axles  
+
+These are:
+
+- 🟢 cheap  
+- 🟢 simple  
+- 🟢 easy to outsource  
+
+👉 You can order them from a local machinist.
+👉 Option:
+- source yourself  
+- or order a **pre-selected kit from the project. just ask me somhere here**
+
+---
+
+# 🔩 3. Laser-Cut Parts (Highly Recommended)
+
+For:
+
+- brackets  
+- mounts  
+- structural connectors  
+
+👉 A **laser cutter** significantly improves:
+
+- precision  
+- assembly speed  
+- rigidity  
+
+Without it:
+- you can improvise, but accuracy will drop
+
+---
+
+# 🧱 4. Optional: 🎨 Body & Styling 3D Printing
+
+- covers  
+- visual design  
+- plywood 🪵  
+- foam panels 🧩  
+- composite / carbon panels  
+Not required for function, but important for experience.
+
+---
+
+# 🔌 5. 🔗 Wiring & Electronics Assembly 
+
+After mechanics works — add electronics.
+
+### Core components:
+
+- ⚡ 2× motor wheel drivers  
+- 🔋 battery (36V, 4–8Ah)  
+- 🔽 voltage step-down converter  
+- 🧠 ESP32 controller (WiFi + BLE)  
+- 🎮 joystick  
+
+Everything is mounted directly on the framу CONNECT:
+
+- motor drivers → motor wheels  
+- battery → drivers  
+- ESP32 → control signals  
+- joystick → ESP32  
+
+---
+
+# 🧪 6. First Functional Mode (Scooter Mode)
+
+At this stage: 👉 The machine works as a **drive platform**
+
+Control logic:
+
+- joystick → ESP32  
+- ESP32 → motor drivers  
+- motor wheels → motion  
+
+You now have:
+
+🟢 a controllable vehicle  
+🟢 basic mobility  
+🟢 testable system  
+
+---
+
+# 🤖 7. Mech Mode (Extended System)
+
+Now the interesting part.
+
+You can connect:
+
+- 🥽 VR headset  
+- 🎮 same joystick  
+- 💻 Unreal Engine system (from repo)
+
+Result:
+
+👉 The machine becomes part of a **mixed-reality mech system**
+
+You can:
+
+- control movement physically  
+- control a mech avatar  
+- interact in AR/VR space  
+
+---
+
+# 🎯 8. MechSport Layer
+
+With full setup:
+
+- 🎮 player controls mech  
+- 🚶 machine mirrors motion  
+- 🔫 virtual weapons controlled by joystick  
+
+---
+
+# 🧭 Build Summary (Reality)
+
+Real build flow:
+
+1. 🔧 fabricate frame  
+2. ⚙️ assemble linkage  
+3. 🧱 install machined parts  
+4. 🚲 add bike components  
+5. 🔩 mount brackets (laser-cut)  
+6. 🔌 install electronics  
+7. 🎮 test scooter mode  
+8. 🤖 connect VR system  
+
+---
+
+# 💰 Cost & Time
+
+Typical prototype:
+
+- $3,000 – $7,000 (DIY build)
+Prebuilt system:
+- ~$20,000  
+- solo builder: **2-4 months**  
+
+---
+
+# All the draws, CAD models, firmware i try you can [get here]() 
+
+If not just ask me dselog@gmail.com 
+
+[README.md](README.md)
+
+[START_A_TEAM](START_A_TEAM.md)
+
+---
+
+<a href="https://github.com/Dvijtech/ellic/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
+
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/Dvijtech/ellic" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
+
+=== cad/MECHANISM.md ===
+# ⚙️ Ellic Walking Mechanism
+
+## 🧭 Overview
+
+**Ellic** uses an **elliptical walking linkage** to create a human-scale locomotion system.
+
+The mechanism converts **continuous rotary motion** into a **closed stepping trajectory**.
+
+Instead of rolling like a wheel, the foot follows a path that **approximates a walking step**.
+
+This creates a motion somewhere between:
+
+- 🛴 a scooter  
+- 🤖 a walking robot  
+- 🦿 a mechanical exoskeleton vehicle  
+
+# 🔁 Motion of the Mechanism 
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/walking_mechanism.gif" alt="View Ellic Model" width="40%">
+</p>
+
+The video above shows the **core motion principle** of the Ellic walking mechanism.
+
+A rotating crank drives a linkage that moves the foot along an elliptical path.
+
+---
+# 🧩 Main Mechanical Elements
+
+The basic mechanism consists of several key components:
+
+- 🧱 **Frame** — structural base of the machine  
+- ⚙️ **Main crank** — rotating element driven by the motor  
+- 🔗 **Connecting rod** — transfers motion from the crank to the linkage  
+
+Together these elements form the **elliptical walking linkage**.
+
+---
+
+# ⚙️ How the Mechanism Works
+
+1️⃣ The **main crank rotates** continuously.  
+
+2️⃣ The crank **drives the connecting rod**.  
+
+3️⃣ The linkage constrains the motion of the foot element.  
+
+4️⃣ The foot follows an **approximately elliptical trajectory**.
+
+This trajectory produces a **step-like ground interaction** rather than pure rolling motion.
+
+The result is a **stable stepping locomotion pattern** suitable for a human-scale vehicle.
+
+---
+
+# 📏 Typical Kinematic Parameters
+
+The behavior of the mechanism is determined by several geometric parameters:
+
+- ⏱ **wheels size**  
+- 📐 **step length** 
+- 📐 **hands width**  
+ - 🔩 **link lengths**
+
+Changing these parameters alters:
+
+- walking smoothness  
+- stability  
+- propulsion efficiency  
+- rider comfort  
+
+---
+
+# 🧪 Current Prototype
+
+CAD models are available in multiple engineering formats:
+
+- 🧩 **STEP** — engineering CAD exchange  
+- 🧱 **STL** — mesh model for prototyping  
+- 🛠 **Fusion 360 source** — full design history  
+
+---
+
+# 🧷 Ellic V14 Model
+
+The **Ellic V14 CAD model** can be accessed here
+
+👉 **[CAD]()**
+
+These files allow engineers to:
+- 🔍 explore the mechanism  
+- 📊 analyze the kinematics  
+- 🛠 experiment with modifications  
+- 🤖 build their own prototype
+
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dvijtech/ellic/main/media/ViewEllicV14model.gif" alt="View Ellic Model" width="40%">
+</p>
+
+---
+
+# 🚀 Why This Mechanism Exists
+
+The Ellic project explores whether **human-scale walking machines** can become a new class of locomotion platform.
+
+Possible future directions include:
+
+- 🤖 robotics research  
+- 🛴 experimental mobility systems  
+- 🕶 VR-linked locomotion  
+- 🏁 human-piloted mech competitions  
+
+The mechanism is still evolving.
+
+This repository documents the **current stage of the experiment**.
+
+
+[README.ma](README.md)
+
+[START_A_TEAM](START_A_TEAM.md)
+
+---
+
+<a href="https://github.com/Dvijtech/ellic/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
+
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/Dvijtech/ellic" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
+
+=== cad/manufacturing/laser/assemblies/CronsHobot_set/READMEass.md ===
+#CronsHobot# looks like 
+
+![# CronsHobot_10mm_EllicV15](/cad/manufacturing/laser/10mm/CronsHobot_10mm_EllicV15.PNG)
+
+
+# CronsHobot parts are:
+
+[cad/manufacturing/laser/10mm/laser_frontplate_10mm_ellicV15.dxf](/cad/manufacturing/laser/10mm/laser_frontplate_10mm_ellicV15.dxf)
+
+[cad/manufacturing/laser/10mm/laser_mountplate_10mm_EllicV15.dxf](/cad/manufacturing/laser/10mm/laser_mountplate_10mm_EllicV15.dxf)
+
+[cad/manufacturing/laser/10 mm/laser_tavr_10mm_ellicV15.dxf](/cad/manufacturing/laser/10mm/laser_tavr_10mm_ellicV15.dxf)
+
+Hobot look at model [cad/fusion/PARTS/WHEELS/CronsHobot.f3d](/cad/fusion/PARTS/WHEELS/CronsHobot.f3d)
+
+Easy assembly
+
+
+Welding
+
+
+
+
+
+=== community/START_A_TEAM.md ===
+# 🚀 Start an Ellic Team
+
+To participate in the first **mech sport experiments** you need a small team.
+
+## 👥 Minimum team structure
+
+1. **🔧 Fabrication Engineer**  
+   Responsible for mechanical assembly, repair and mechanical modifications.  
+
+2. **🧠 XR Engineer**  
+   Responsible for control systems, firmware and VR interaction.  
+
+3. **🎥 Media Producer**  
+   Responsible for filming, editing and publishing team content.  
+
+Teams can be as small as **2–3 people**.  
+One person may combine several roles.
+
+# 🌍 Who Might Start an Ellic Team
+
+Different kinds of builders and operators may see themselves in this project.
+
+## 🏎 Karting Track Owners
+
+If you run a karting track or motorsport facility, you already have most of the infrastructure needed for mech sport.
+
+You likely already have:
+
+- mechanical workshops  
+- mechanics and technicians  
+- competitive drivers  
+- a racing culture  
+
+---
+
+## 🥽 VR Arena Owners
+
+- a new attraction for visitors  
+- a competition format for young players  
+- a basis for educational programs combining engineering and gameplay
+
+---
+
+## 📺 Tech YouTubers and Streamers
+
+If you are a **tech YouTuber, maker, or streamer**, Ellic can become a powerful content project.
+
+The platform combines:
+
+- XR gameplay  
+- robotics  
+- bionic locomotion machines  
+- experimental sport  
+
+Building and piloting an Ellic machine is both a **technical challenge** and a **content story**.
+
+Streamers and creators can build their own teams and document the process for their audiences.
+
+---
+
+## 🎨 Designers and Visual Creators
+
+Experimental machines become much more powerful when they have strong visual identity.
+
+Teams may include:
+
+- industrial designers  
+- concept artists  
+- 3D artists  
+- visual creators  
+
+Designers can develop:
+
+- machine body kits  
+- visual concepts for mech sport machines
+
+These visual elements help transform machines into **recognizable competitors and media characters**.
+
+---
+
+## 🛠 Individual Pro
+
+Want to participate but don’t yet have a team?
+
+You can register yourself to **find teammates** for a new project.
+
+📧 Write to: **dselog@gmail.com**
+
+Use the subject: find teammates
+**Nickname:**  
+**Skill:** (Fabrication / VR / Media)  
+**Interested in:** (Mech Sport League / Para Mech Sport)
+
+
+# 🏁 CORE TEAMS
+
+Early teams will become the **core teams of the first mech sport league**.
+
+The long-term vision is similar to modern motorsport leagues such as **Formula 1 racing**, where teams compete with their own machines while participating in a shared media and competition ecosystem.
+
+
+## 💰 League Economics (Concept)
+
+The long-term economic model of the league is to share revenue with core teams:
+
+* 🎬 media content and distribution  
+* 🎮 live events  
+* 🤝 brands & integrations  
+
+to support the growth of both the teams and the championship ecosystem.
+
+
+# 📧 Write to: **dselog@gmail.com**
+
+
+[README.MD](README.md)
+
+---
+
+<a href="https://github.com/Dvijtech/ellic/stargazers" target="_blank" style="text-decoration:none;">
+  <kbd>⭐ Star the repository</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/fork" target="_blank" style="text-decoration:none;">
+  <kbd>🔧 Fork the project</kbd>
+</a>
+
+<a href="https://github.com/Dvijtech/ellic/issues" target="_blank" style="text-decoration:none;">
+  <kbd>💡 Open issues with ideas</kbd>
+</a>
+
+<a href="https://twitter.com/intent/tweet?text=Check+out+this+project+on+GitHub&url=https://github.com/Dvijtech/ellic" target="_blank" style="text-decoration:none;">
+  <kbd>📢 Share the project</kbd>
+</a>
+
+
+=== docs/history/ellicDevHistory.md ===
+# Ellic Development History
+
+This document describes the historical development of the Ellic locomotion platform.
+
+The project has gone through many prototype generations exploring different mechanical solutions, drive systems, and ergonomics.
+
+The table below lists the major development stages.
+
+---
+
+## Prototype Evolution
+
+| # | Prototype | Cost (k RUB) | Description |
+|---|-----------|---------------|-------------|
+|1|Scissors|200|First experimental prototype|
+|2|Combine|600|Developed with Bauman Moscow State Technical University. No drive system yet|
+|3|Ladya|750|New kinematic approach. Belt-linked pulley system introduced|
+|4|Scooter|700|Return to lever drive concept|
+|5|Shvedka|650|Ergonomic experiments with handle and crank geometry|
+|6|Motor Control System v1|570|Development of motor controllers, PCBs, firmware, gyroscope control|
+|7|Lebed|870|Frame stiffness improvements|
+|8|Kareta|650|Frame geometry experiments for stability|
+|9|Mini Kareta|550|Frame optimization for transport|
+|10|Mini Kareta Front Drive|350|Foot trajectory experiments|
+|11|Blue Goose|700|Reduced dimensions and increased strength|
+|12|Orange Goose|900|Three-motor configuration experiments|
+|13|Kid|300|Toy educational version using aluminum profiles|
+|14|Black Raptor|960|Simplified frame and cantilever wheel mounting|
+|15|Motor Raptor|570|Compact motorized version|
+|16|Motor Control System v2|760|Redesigned control electronics|
+|17|White Raptor|700|Simplified design and improved manufacturability|
+|18|Pilot Support System (Blue)|100|Support system for riders with disabilities|
+|19|Remote Support System (Orange)|300|Tests with children with cerebral palsy|
+|20|Gear Geometry Stabilization|70|Torque stabilization during walking cycles|
+|21|Bottom Bracket Motor Integration|450|Mechanical integration of pedal motor|
+|22|Three Motor Integration|300|Software and electrical integration|
+|23|Documentation Development|30|User manual and training materials|
+|24|Innovation Fund Grant|—|2M RUB grant received|
+|25|Production Documentation|700|Manufacturing documentation prepared|
+|26|3 Production Prototypes|1000|Manufacturing of three machines|
+|27|Scientific Technical Report|300|Final technical documentation|
+
+---
+
+## Direct Development Investment
+
+**Total direct engineering investment**
+
+≈ **14,030,000 RUB**
+
+---
+
+## Additional Activities
+
+| Activity | Cost (k RUB) | Description |
+|--------|--------|-------------|
+|Fitness Exhibition|40|Public presentation|
+|Integration Expo 2024|40|Start of partnership with Grossko|
+|Integration Expo 2025|40|Continuation of public demonstrations|
+|Robofinist Exhibition|150|3-day continuous operation tests|
+|Grant Applications|200|Preparation of innovation grants|
+|Social Media Content|600|More than 20M views across platforms|
+|Websites|200|Project websites|
+|Patents|300|Several patents filed and maintained|
+|Human Trials|620|Testing at rehabilitation center|
+
+---
+
+## Additional Investment
+
+**≈ 2,190,000 RUB**
+
+---
+
+## Founder Work
+
+Founder contribution:
+
+- development since **September 2019**
+- approximately **0.25 full-time equivalent**
+
+Estimated labor contribution:
+
+≈ **3,600,000 RUB**
+
+---
+
+## Total Estimated Investment
+
+Engineering + ecosystem development:
+
+≈ **19,820,000 RUB**
+
+---
+
+This history illustrates the long experimental path behind the current Ellic prototype.
+

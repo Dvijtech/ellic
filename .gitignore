@@ -8,8 +8,10 @@ __pycache__/
 .venv/
 
 # Arduino / PlatformIO
-.pio/
+**/.pio/
+**/.vscode/
 *.bin
+
 
 # build
 build/
