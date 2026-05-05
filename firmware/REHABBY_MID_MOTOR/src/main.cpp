@@ -1,51 +1,47 @@
 #include <Arduino.h>
-#include <BleGamepad.h>
 
-BleGamepad bleGamepad("VR_Trigger", "ESP32", 100);
+#define JOY_Y_PIN A1
+#define MOTOR_PIN 10
 
-const int buttonPin = 4;
+// Калибровка (под тебя)
+int center = 489;     // центр джойстика (ты измерил)
+int deadZone = 20;    // мёртвая зона
 
-bool lastState = HIGH;
+int currentPWM = 0;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
-
-  pinMode(buttonPin, INPUT_PULLUP);
-
-  bleGamepad.begin();
+pinMode(MOTOR_PIN, OUTPUT);
+Serial.begin(9600);
 }
 
 void loop() {
-  if (bleGamepad.isConnected()) {
+int joyY = analogRead(JOY_Y_PIN);
 
-    bool state = digitalRead(buttonPin);
+// считаем отклонение от центра
+int delta = center - joyY;
+// ВАЖНО: у тебя вверх = уменьшение значения (0 при полном газе)
 
-    // кнопка нажата
-    if (state == LOW && lastState == HIGH) {
+int targetPWM = 0;
 
-      bleGamepad.press(BUTTON_1);
-
-    }
-
-    // кнопка отпущена
-    if (state == HIGH && lastState == LOW) {
-
-      bleGamepad.release(BUTTON_1);
-
-    }
-
-    lastState = state;
-  }
-
-  delay(5);
+if (delta > deadZone) {
+targetPWM = map(delta, deadZone, center, 0, 85);
+} else {
+targetPWM = 0;
 }
-// put function declarations here:
 
+// защита от мусора
+targetPWM = constrain(targetPWM, 0, 85);
 
+// плавный разгон (очень важно для JYQD)
+currentPWM += (targetPWM - currentPWM) * 0.1;
 
+analogWrite(MOTOR_PIN, currentPWM);
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  reurn x + y;
+// отладка
+Serial.print("Y: ");
+Serial.print(joyY);
+Serial.print(" | PWM: ");
+Serial.println(currentPWM);
+
+delay(1000);
 }
