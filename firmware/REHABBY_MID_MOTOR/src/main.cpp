@@ -14,7 +14,7 @@ bool wasActive = false;
 
 unsigned long startTime = 0;
 
-int motorStartPWM = 65; // пинок
+int motorStartPWM = 450; // пинок
 int motorRunPWM = 35; // нормальная работа
 int motorMaxPWM = 35; // максимум
 
@@ -46,7 +46,7 @@ if (!wasActive) {
 }
 
 // первые 100 мс даём пинок
-if (millis() - startTime < 100) {
+if (millis() - startTime < 700) {
   targetPWM = motorStartPWM;
 } else {
   // дальше обычная кривая
