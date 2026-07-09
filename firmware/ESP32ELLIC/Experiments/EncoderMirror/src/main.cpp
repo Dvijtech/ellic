@@ -1,11 +1,13 @@
 #include <Arduino.h>
 
-void sendCommand(HardwareSerial &port, const char *cmd)
+void sendCommand(HardwareSerial &port, const char *name, const char *cmd)
 {
     port.print(cmd);
     port.print('\n');
 
-    Serial.print(">> ");
+    Serial.print("[");
+    Serial.print(name);
+    Serial.print("] >> ");
     Serial.println(cmd);
 }
 
@@ -23,21 +25,21 @@ void setup()
 
     Serial.println("Starting ODrives");
 
-    sendCommand(Serial1, "w axis0.requested_state 8");
-    sendCommand(Serial2, "w axis0.requested_state 8");
+    sendCommand(Serial1, "LEFT", "w axis0.requested_state 8");
+    sendCommand(Serial2, "RIGHT", "w axis0.requested_state 8");
 
     delay(500);
 }
 
 void loop()
 {
-    sendCommand(Serial1, "w axis0.controller.input_torque 0.02");
-    sendCommand(Serial2, "w axis0.controller.input_torque 0.02");
+    sendCommand(Serial1, "LEFT", "w axis0.controller.input_torque 0.02");
+    sendCommand(Serial2, "RIGHT", "w axis0.controller.input_torque 0.02");
 
     delay(2000);
 
-    sendCommand(Serial1, "w axis0.controller.input_torque -0.02");
-    sendCommand(Serial2, "w axis0.controller.input_torque -0.02");
+    sendCommand(Serial1, "LEFT", "w axis0.controller.input_torque -0.02");
+    sendCommand(Serial2, "RIGHT", "w axis0.controller.input_torque -0.02");
 
     delay(2000);
 }
