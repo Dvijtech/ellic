@@ -40,4 +40,32 @@ bb9062f 1773822208 start to razbirat components of model fusion
 PS C:\Users\Dim\YandexDisk\ELLIC\ellic> git show 642651a:"cad/fusion/PARTS/WHEELS/Wheel_d24_nonMotored.f3d" >cad/fusion/PARTS/WHEELS/Wheel_d24_nonMotored_642651a.f3d
 
 
+odrivetool
+
+dev0.axis0.error
+dev0.axis0.motor.error
+dev0.axis0.encoder.error
+dev0.axis0.controller.error
+
+dump_errors(dev0)
+
+dev0.clear_errors()
+
+dev0.axis0.requested_state = AXIS_STATE_IDLE
+
+dev0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+
+dev0.axis0.current_state
+dev0.axis0.motor.is_calibrated
+dev0.axis0.encoder.is_ready
+
+\\\ Запуск мотора в обход чегото. дергаетя потом в одну сторону потом в другуг сторону работает
+dev0.axis0.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
+
+dev0.save_configuration()
+
+In [113]: dev0.axis0.config.startup_encoder_offset_calibration = False
+
+In [114]: dev0.axis0.encoder.config.pre_calibrated = True
+
 

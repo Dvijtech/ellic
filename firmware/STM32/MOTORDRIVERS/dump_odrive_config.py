@@ -1,0 +1,12 @@
+{
+    "motor_type":0,
+    "pole_pairs":7,
+    "current_lim":5,
+    "encoder_mode":1,
+    "encoder_cpr":42,
+    "control_mode":1,
+    "input_mode":1,
+    "vel_limit":20,
+    "brake_resistance":2,
+    "dc_max_negative_current":-5
+}
