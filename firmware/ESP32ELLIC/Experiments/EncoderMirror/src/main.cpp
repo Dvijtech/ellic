@@ -4,164 +4,113 @@
 
 AS5600 encoder;
 
-HardwareSerial &LeftODrive = Serial1;
-HardwareSerial &RightODrive = Serial2;
+HardwareSerial LeftODrive(1);
+HardwareSerial RightODrive(2);
 
+float startAngle;
 
-float centerAngle = 0;
-unsigned long lastPrint = 0;
+float currentTorque = 999.0;
 
-
-// отправка команды ODrive
-void sendCommand(HardwareSerial &port, const char *name, String cmd)
+float getAngle()
 {
-    port.print(cmd);
-    port.print('\n');
-
-    Serial.print("[");
-    Serial.print(name);
-    Serial.print("] ");
-    Serial.println(cmd);
+    return encoder.readAngle() * 360.0f / 4096.0f;
 }
 
-
-// нормализация угла (-180 ... +180)
-float angleDifference(float a, float b)
+void sendTorque(float torque)
 {
-    float diff = a - b;
+    if (fabs(torque - currentTorque) < 0.0001)
+        return;
 
-    if(diff > 180)
-        diff -= 360;
+    currentTorque = torque;
 
-    if(diff < -180)
-        diff += 360;
+    String cmd = "w axis0.controller.input_torque ";
+    cmd += String(torque, 3);
 
-    return diff;
+    LeftODrive.println(cmd);
+    RightODrive.println(cmd);
 }
-
 
 void setup()
 {
     Serial.begin(115200);
 
+    LeftODrive.begin(115200, SERIAL_8N1, 16, 17);
+    RightODrive.begin(115200, SERIAL_8N1, 26, 25);
 
-    // ODrive UART
-    LeftODrive.begin(115200, SERIAL_8N1, 16,17);
-    RightODrive.begin(115200, SERIAL_8N1, 26,25);
-
-
-    // AS5600
-    Wire.begin(21,22);
-
+    Wire.begin(21, 22);
 
     delay(1000);
 
-
-    if(!encoder.begin())
+    if (!encoder.begin())
     {
-        Serial.println("AS5600 NOT FOUND");
-        while(true);
+        Serial.println("AS5600 ERROR");
+        while (1);
     }
 
+    startAngle = getAngle();
 
-    Serial.println("AS5600 OK");
+    Serial.println();
+    Serial.println("===== TORQUE FOLLOW TEST =====");
 
+    Serial.print("START ANGLE: ");
+    Serial.println(startAngle);
 
-    // запоминаем центр
-    centerAngle = encoder.readAngle()*360.0/4096.0;
-
-    Serial.print("Center=");
-    Serial.println(centerAngle);
-
-
-
-    // включаем ODrive
-    sendCommand(
-        LeftODrive,
-        "LEFT",
-        "w axis0.requested_state 8"
-    );
-
-    sendCommand(
-        RightODrive,
-        "RIGHT",
-        "w axis0.requested_state 8"
-    );
-
+    // Closed Loop
+    LeftODrive.println("w axis0.requested_state 8");
+    RightODrive.println("w axis0.requested_state 8");
 
     delay(500);
+
+    // Torque Control
+    LeftODrive.println("w axis0.controller.config.control_mode 1");
+    RightODrive.println("w axis0.controller.config.control_mode 1");
+
+    LeftODrive.println("w axis0.controller.config.input_mode 1");
+    RightODrive.println("w axis0.controller.config.input_mode 1");
+
+    delay(500);
+
+    sendTorque(0);
 }
-
-
 
 void loop()
 {
+    float angle = getAngle();
 
-    float angle =
-        encoder.readAngle()*360.0/4096.0;
+    float delta = angle - startAngle;
 
+    if (delta > 180)
+        delta -= 360;
 
-    float error =
-        angleDifference(angle, centerAngle);
+    if (delta < -180)
+        delta += 360;
 
+    float torque = 0.0;
 
+    if (delta > 3)
+        torque = 0.02;
 
-    // мертвая зона вокруг центра
-    if(abs(error)<5)
+    if (delta < -3)
+        torque = -0.02;
+
+    sendTorque(torque);
+
+    static unsigned long lastPrint = 0;
+
+    if (millis() - lastPrint >= 1000)
     {
-        error=0;
+        Serial.println("----------------------");
+        Serial.print("ANGLE : ");
+        Serial.println(angle, 1);
+
+        Serial.print("DELTA : ");
+        Serial.println(delta, 1);
+
+        Serial.print("TORQUE: ");
+        Serial.println(torque, 3);
+
+        lastPrint = millis();
     }
 
-
-    // преобразуем угол в момент
-    float torque = error / 90.0 * 0.03;
-
-
-    // ограничение
-    if(torque > 0.03)
-        torque = 0.03;
-
-    if(torque < -0.03)
-        torque = -0.03;
-
-
-
-    String cmd =
-        "w axis0.controller.input_torque " 
-        + String(torque,3);
-
-
-
-    sendCommand(
-        LeftODrive,
-        "LEFT",
-        cmd
-    );
-
-
-    sendCommand(
-        RightODrive,
-        "RIGHT",
-        cmd
-    );
-
-
-
-    // вывод 2 раза в секунду
-    if(millis()-lastPrint>500)
-    {
-        Serial.print("ANGLE=");
-        Serial.print(angle);
-
-        Serial.print(" ERROR=");
-        Serial.print(error);
-
-        Serial.print(" TORQUE=");
-        Serial.println(torque);
-
-        lastPrint=millis();
-    }
-
-
-    delay(50);
+    delay(20);
 }
