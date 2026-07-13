@@ -1,127 +1,120 @@
-#include <Arduino.h>
+﻿#include <Arduino.h>
 #include <Wire.h>
 #include <AS5600.h>
 
 AS5600 encoder;
 
-// ---------------- ODrive ----------------
+// =========================
+// Настройки
+// =========================
+constexpr uint32_t READ_INTERVAL_MS  = 50;    // 20 Гц
+constexpr uint32_t PRINT_INTERVAL_MS = 500;   // 2 Гц
+constexpr uint32_t STOP_TIMEOUT_MS   = 400;   // 300-500 мс
 
-HardwareSerial &LeftODrive  = Serial1;
-HardwareSerial &RightODrive = Serial2;
+constexpr float EMA_ALPHA = 0.35f;
 
-// ---------------- Encoder ----------------
+constexpr float STOP_DELTA_DEG   = 1.0f;
+constexpr float RESTART_DELTA_DEG = 7.0f;
 
-float lastAcceptedAngle = 0.0f;
+// =========================
+
+enum MotionState
+{
+    MOVING,
+    STOP
+};
+
+MotionState state = MOVING;
+
+// Таймеры
+uint32_t lastReadTime = 0;
+uint32_t lastPrintTime = 0;
+
+// Сырые данные
+uint16_t rawAngle = 0;
+
+// Последнее значение AS5600
+int32_t previousRaw = 0;
+bool firstRead = true;
+
+// Непрерывный угол
 float continuousAngle = 0.0f;
 
-const float DEAD_BAND = 15.0f;      // игнорировать изменения меньше 15°
+// EMA
+float filteredAngle = 0.0f;
 
-float lastTargetTurns = 999999.0f;
+// Зафиксированный угол
+float lockedAngle = 0.0f;
 
-//------------------------------------------------
+// Последнее движение
+float previousFiltered = 0.0f;
+uint32_t lastMovementTime = 0;
 
-void sendBoth(const String &cmd)
-{
-    LeftODrive.println(cmd);
-    RightODrive.println(cmd);
-}
+//==================================================
 
-//------------------------------------------------
+void readEncoder();
+void updateContinuousAngle();
+void filterAngle();
+void detectMovement();
+void printStatus();
+void sendPositionToODrive(float angle);
 
-float readAngle()
-{
-    return encoder.readAngle() * 360.0f / 4096.0f;
-}
-
-//------------------------------------------------
+//==================================================
 
 void setup()
 {
     Serial.begin(115200);
+    delay(500);
 
-    LeftODrive.begin(115200, SERIAL_8N1, 16, 17);
-    RightODrive.begin(115200, SERIAL_8N1, 26, 25);
-
-    Wire.begin(21,22);
-
-    delay(1000);
-
-    if(!encoder.begin())
-    {
-        Serial.println("AS5600 ERROR");
-        while(true);
-    }
-
-    lastAcceptedAngle = readAngle();
+    Wire.begin();
+    Wire.setClock(100000);
 
     Serial.println();
-    Serial.println("===== START =====");
+    Serial.println("Initializing AS5600...");
 
-    sendBoth("w axis0.requested_state 8");
-    delay(300);
+    if (!encoder.begin())
+    {
+        Serial.println("ERROR: AS5600 not found.");
+        while (true);
+    }
 
-    sendBoth("w axis0.controller.config.control_mode 3");
-    delay(100);
+    Serial.println("AS5600 OK");
 
-    sendBoth("w axis0.controller.config.input_mode 1");
-    delay(100);
+    /// if (!encoder.detectMagnet())
+    if (!encoder.magnetDetected())
+    {
+        Serial.println("WARNING: Magnet not detected.");
+    }
+    else
+    {
+        Serial.println("Magnet detected.");
+    }
 
-    sendBoth("w axis0.controller.input_pos 0");
-    delay(300);
-
-    Serial.println("READY");
+    lastMovementTime = millis();
 }
 
-//------------------------------------------------
+//==================================================
 
 void loop()
 {
-    static unsigned long lastPrint = 0;
+    uint16_t raw = encoder.rawAngle();
+    uint16_t ang = encoder.readAngle();
 
-    float angle = readAngle();
+    Serial.print("RAW=");
+    Serial.print(raw);
 
-    float delta = angle - lastAcceptedAngle;
+    Serial.print("  LOW4=");
+    Serial.print(raw & 0x0F);
 
-    if(delta > 180.0f) delta -= 360.0f;
-    if(delta < -180.0f) delta += 360.0f;
+    Serial.print("  ANG=");
+    Serial.println(ang);
 
-    // Если меньше 15° — считаем, что ничего не произошло
-    if(fabs(delta) >= DEAD_BAND)
-    {
-        continuousAngle += delta;
-        lastAcceptedAngle = angle;
+    delay(5);
+}
+//==================================================
 
-        float targetTurns = continuousAngle / 360.0f;
-
-        // Отправляем только если реально изменилась цель
-        if(targetTurns != lastTargetTurns)
-        {
-            lastTargetTurns = targetTurns;
-
-            sendBoth(
-                "w axis0.controller.input_pos " +
-                String(targetTurns,4)
-            );
-        }
-    }
-
-    if(millis() - lastPrint >= 1000)
-    {
-        lastPrint = millis();
-
-        Serial.println("-----------------------");
-        Serial.print("RAW ANGLE      : ");
-        Serial.println(angle,2);
-
-        Serial.print("ACCEPTED ANGLE : ");
-        Serial.println(lastAcceptedAngle,2);
-
-        Serial.print("CONTINUOUS     : ");
-        Serial.println(continuousAngle,2);
-
-        Serial.print("TARGET TURNS   : ");
-        Serial.println(lastTargetTurns,4);
-    }
-
-    delay(10);
+void sendPositionToODrive(float angle)
+{
+    // Заглушка.
+    // Здесь позже будет UART-команда в ODrive.
 }
