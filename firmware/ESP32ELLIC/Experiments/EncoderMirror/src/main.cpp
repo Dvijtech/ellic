@@ -98,18 +98,17 @@ void setup()
 void loop()
 {
     uint16_t raw = encoder.rawAngle();
-    uint16_t ang = encoder.readAngle();
 
     Serial.print("RAW=");
     Serial.print(raw);
 
-    Serial.print("  LOW4=");
-    Serial.print(raw & 0x0F);
+    Serial.print(" HEX=0x");
+    Serial.print(raw, HEX);
 
-    Serial.print("  ANG=");
-    Serial.println(ang);
+    Serial.print(" LOW4=");
+    Serial.println(raw & 0x0F);
 
-    delay(5);
+    delay(20);
 }
 //==================================================
 
