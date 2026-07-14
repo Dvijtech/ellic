@@ -1,119 +1,249 @@
 ﻿#include <Arduino.h>
-#include <Wire.h>
-#include <AS5600.h>
 
-AS5600 encoder;
+#include "Encoder.h"
+#include "ODriveUART.h"
+#include "PhaseDetector.h"
+#include "MotionController.h"
 
-// =========================
-// Настройки
-// =========================
-constexpr uint32_t READ_INTERVAL_MS  = 50;    // 20 Гц
-constexpr uint32_t PRINT_INTERVAL_MS = 500;   // 2 Гц
-constexpr uint32_t STOP_TIMEOUT_MS   = 400;   // 300-500 мс
 
-constexpr float EMA_ALPHA = 0.35f;
+Encoder encoder;
+PhaseDetector phaseDetector;
+MotionController motionController;
 
-constexpr float STOP_DELTA_DEG   = 1.0f;
-constexpr float RESTART_DELTA_DEG = 7.0f;
 
-// =========================
 
-enum MotionState
+// ================================
+// ODrive
+// ================================
+
+ODriveUART leftODrive(
+    &Serial1,
+    1.0
+);
+
+
+ODriveUART rightODrive(
+    &Serial2,
+    -1.0
+);
+
+
+
+// ================================
+// настройки
+// ================================
+
+constexpr uint32_t CONTROL_PERIOD = 20;
+
+
+// максимальный момент
+// пока безопасно
+constexpr float MAX_TORQUE = 0.15f;
+
+
+// ================================
+
+unsigned long lastControl = 0;
+
+
+
+// сигмоида 0..1
+float sigmoid(float x)
 {
-    MOVING,
-    STOP
-};
+    return 1.0f /
+    (1.0f + exp(-x));
+}
 
-MotionState state = MOVING;
 
-// Таймеры
-uint32_t lastReadTime = 0;
-uint32_t lastPrintTime = 0;
 
-// Сырые данные
-uint16_t rawAngle = 0;
+// плавный импульс
 
-// Последнее значение AS5600
-int32_t previousRaw = 0;
-bool firstRead = true;
+float gaitAssist(float phase)
+{
 
-// Непрерывный угол
-float continuousAngle = 0.0f;
+    // центр импульса
+    // -1 ... 1
 
-// EMA
-float filteredAngle = 0.0f;
+    return sigmoid(phase*8.0f);
 
-// Зафиксированный угол
-float lockedAngle = 0.0f;
 
-// Последнее движение
-float previousFiltered = 0.0f;
-uint32_t lastMovementTime = 0;
+}
 
-//==================================================
 
-void readEncoder();
-void updateContinuousAngle();
-void filterAngle();
-void detectMovement();
-void printStatus();
-void sendPositionToODrive(float angle);
 
-//==================================================
+// ================================
+
 
 void setup()
 {
-    Serial.begin(115200);
-    delay(500);
 
-    Wire.begin();
-    Wire.setClock(100000);
+    Serial.begin(115200);
+
 
     Serial.println();
-    Serial.println("Initializing AS5600...");
+    Serial.println("=================");
+    Serial.println("ELLIC TORQUE TEST");
+    Serial.println("=================");
 
-    if (!encoder.begin())
-    {
-        Serial.println("ERROR: AS5600 not found.");
-        while (true);
-    }
 
-    Serial.println("AS5600 OK");
 
-    /// if (!encoder.detectMagnet())
-    if (!encoder.magnetDetected())
-    {
-        Serial.println("WARNING: Magnet not detected.");
-    }
-    else
-    {
-        Serial.println("Magnet detected.");
-    }
+    encoder.begin();
 
-    lastMovementTime = millis();
+
+
+    leftODrive.begin(
+        16,
+        17
+    );
+
+
+    rightODrive.begin(
+        26,
+        25
+    );
+
+
+
+    delay(1000);
+
+
+
+    Serial.println();
+    Serial.println(
+        "Stand on RIGHT LEG"
+    );
+
+
+    Serial.println(
+        "Calibration in 5 sec"
+    );
+
+
+    delay(5000);
+
+
+
+    encoder.calibrateZero();
+
+
+
+    phaseDetector.begin(0);
+
+    motionController.begin();
+
+    Serial.println("READY");
+
 }
 
-//==================================================
+
+
+// ================================
+
 
 void loop()
 {
-    uint16_t raw = encoder.rawAngle();
 
-    Serial.print("RAW=");
-    Serial.print(raw);
+    float rawAngle =
+        encoder.readJointAngle();
 
-    Serial.print(" HEX=0x");
-    Serial.print(raw, HEX);
 
-    Serial.print(" LOW4=");
-    Serial.println(raw & 0x0F);
 
-    delay(20);
-}
-//==================================================
+    phaseDetector.update(
+        rawAngle
+    );
 
-void sendPositionToODrive(float angle)
-{
-    // Заглушка.
-    // Здесь позже будет UART-команда в ODrive.
+
+
+    Serial.print("ANGLE ");
+    Serial.print(
+        phaseDetector.jointAngle()
+    );
+
+
+    Serial.print(" PHASE ");
+
+
+
+    GaitPhase phase =
+        phaseDetector.phase();
+
+
+
+    switch(phase)
+    {
+
+        case GaitPhase::STOP:
+            Serial.println("STOP");
+            break;
+
+
+        case GaitPhase::LEFT_START:
+            Serial.println("LEFT_START");
+            break;
+
+
+        case GaitPhase::LEFT_PUSH:
+            Serial.println("LEFT_PUSH");
+            break;
+
+
+        case GaitPhase::RIGHT_START:
+            Serial.println("RIGHT_START");
+            break;
+
+
+        case GaitPhase::RIGHT_PUSH:
+            Serial.println("RIGHT_PUSH");
+            break;
+
+    }
+
+
+
+
+
+    if(
+      millis()-lastControl 
+      > CONTROL_PERIOD
+    )
+    {
+
+        lastControl =
+            millis();
+
+
+
+        motionController.update(
+            phaseDetector.jointAngle(),
+            phaseDetector.phase()
+        );
+
+
+        leftODrive.setTorque(
+            motionController.leftTorque()
+        );
+
+
+        rightODrive.setTorque(
+            motionController.rightTorque()
+        );
+
+        Serial.print(
+            " TORQUE "
+        );
+
+        Serial.print(
+            motionController.leftTorque()
+        );
+
+        Serial.print(" ");
+
+        Serial.println(
+            motionController.rightTorque()
+        );
+
+
+    }
+
+
 }
