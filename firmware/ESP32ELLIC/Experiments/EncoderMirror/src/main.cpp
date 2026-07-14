@@ -1,249 +1,207 @@
 ﻿#include <Arduino.h>
+#include <Wire.h>
+#include <AS5600.h>
 
-#include "Encoder.h"
-#include "ODriveUART.h"
-#include "PhaseDetector.h"
-#include "MotionController.h"
+//====================================================
+//                      AS5600
+//====================================================
 
+AS5600 encoder;
 
-Encoder encoder;
-PhaseDetector phaseDetector;
-MotionController motionController;
+//====================================================
+//                      ODrive
+//====================================================
 
+HardwareSerial &LeftODrive  = Serial1;
+HardwareSerial &RightODrive = Serial2;
 
+//====================================================
+//                   НАСТРОЙКИ
+//====================================================
 
-// ================================
-// ODrive
-// ================================
+constexpr int SDA_PIN = 21;
+constexpr int SCL_PIN = 22;
 
-ODriveUART leftODrive(
-    &Serial1,
-    1.0
-);
+constexpr int LEFT_RX  = 16;
+constexpr int LEFT_TX  = 17;
 
+constexpr int RIGHT_RX = 26;
+constexpr int RIGHT_TX = 25;
 
-ODriveUART rightODrive(
-    &Serial2,
-    -1.0
-);
+constexpr float GEAR_RATIO = 10.4f;
 
-
-
-// ================================
-// настройки
-// ================================
-
+// период отправки команд
 constexpr uint32_t CONTROL_PERIOD = 20;
 
+// период печати
+constexpr uint32_t PRINT_PERIOD = 100;
 
-// максимальный момент
-// пока безопасно
-constexpr float MAX_TORQUE = 0.15f;
+//====================================================
+//                  ПЕРЕМЕННЫЕ
+//====================================================
 
+float rawAngle = 0.0f;
+float lastAngle = 0.0f;
 
-// ================================
+float delta = 0.0f;
+
+float continuousAngle = 0.0f;
+
+float targetTurns = 0.0f;
 
 unsigned long lastControl = 0;
+unsigned long lastPrint = 0;
 
+//====================================================
 
-
-// сигмоида 0..1
-float sigmoid(float x)
+float readAngle()
 {
-    return 1.0f /
-    (1.0f + exp(-x));
+    return encoder.readAngle() * 360.0f / 4096.0f;
 }
 
+//====================================================
 
-
-// плавный импульс
-
-float gaitAssist(float phase)
+float shortestDelta(float now, float old)
 {
+    float d = now - old;
 
-    // центр импульса
-    // -1 ... 1
+    if (d > 180.0f)
+        d -= 360.0f;
 
-    return sigmoid(phase*8.0f);
+    if (d < -180.0f)
+        d += 360.0f;
 
-
+    return d;
 }
 
+//====================================================
 
+void sendPosition(HardwareSerial &port, float turns)
+{
+    char buffer[64];
 
-// ================================
+    snprintf(
+        buffer,
+        sizeof(buffer),
+        "w axis0.controller.input_pos %.4f",
+        turns
+    );
 
+    port.println(buffer);
+}
+
+//====================================================
 
 void setup()
 {
-
     Serial.begin(115200);
 
-
     Serial.println();
-    Serial.println("=================");
-    Serial.println("ELLIC TORQUE TEST");
-    Serial.println("=================");
+    Serial.println("==============================");
+    Serial.println("ODRIVE POSITION MIRROR");
+    Serial.println("==============================");
 
+    //----------------------------------------
 
+    Wire.begin(SDA_PIN, SCL_PIN);
+    Wire.setClock(100000);
 
-    encoder.begin();
+    delay(300);
 
+    if (!encoder.begin())
+    {
+        Serial.println("AS5600 ERROR");
 
+        while (true)
+            delay(1000);
+    }
 
-    leftODrive.begin(
-        16,
-        17
+    if (!encoder.magnetDetected())
+    {
+        Serial.println("MAGNET ERROR");
+
+        while (true)
+            delay(1000);
+    }
+
+    Serial.println("AS5600 OK");
+
+    //----------------------------------------
+
+    LeftODrive.begin(
+        115200,
+        SERIAL_8N1,
+        LEFT_RX,
+        LEFT_TX
     );
 
-
-    rightODrive.begin(
-        26,
-        25
+    RightODrive.begin(
+        115200,
+        SERIAL_8N1,
+        RIGHT_RX,
+        RIGHT_TX
     );
-
-
 
     delay(1000);
 
+    rawAngle = readAngle();
+    lastAngle = rawAngle;
 
-
-    Serial.println();
-    Serial.println(
-        "Stand on RIGHT LEG"
-    );
-
-
-    Serial.println(
-        "Calibration in 5 sec"
-    );
-
-
-    delay(5000);
-
-
-
-    encoder.calibrateZero();
-
-
-
-    phaseDetector.begin(0);
-
-    motionController.begin();
+    Serial.print("START ANGLE : ");
+    Serial.println(rawAngle,2);
 
     Serial.println("READY");
-
 }
 
-
-
-// ================================
-
+//====================================================
 
 void loop()
 {
+    rawAngle = readAngle();
 
-    float rawAngle =
-        encoder.readJointAngle();
-
-
-
-    phaseDetector.update(
-        rawAngle
+    delta = shortestDelta(
+        rawAngle,
+        lastAngle
     );
 
+    continuousAngle += delta;
 
+    targetTurns =
+        continuousAngle *
+        GEAR_RATIO /
+        360.0f;
 
-    Serial.print("ANGLE ");
-    Serial.print(
-        phaseDetector.jointAngle()
-    );
-
-
-    Serial.print(" PHASE ");
-
-
-
-    GaitPhase phase =
-        phaseDetector.phase();
-
-
-
-    switch(phase)
+    if (millis() - lastControl >= CONTROL_PERIOD)
     {
+        lastControl = millis();
 
-        case GaitPhase::STOP:
-            Serial.println("STOP");
-            break;
+        sendPosition(
+            LeftODrive,
+            targetTurns
+        );
 
-
-        case GaitPhase::LEFT_START:
-            Serial.println("LEFT_START");
-            break;
-
-
-        case GaitPhase::LEFT_PUSH:
-            Serial.println("LEFT_PUSH");
-            break;
-
-
-        case GaitPhase::RIGHT_START:
-            Serial.println("RIGHT_START");
-            break;
-
-
-        case GaitPhase::RIGHT_PUSH:
-            Serial.println("RIGHT_PUSH");
-            break;
-
+        sendPosition(
+            RightODrive,
+            -targetTurns
+        );
     }
 
-
-
-
-
-    if(
-      millis()-lastControl 
-      > CONTROL_PERIOD
-    )
+    if (millis() - lastPrint >= PRINT_PERIOD)
     {
+        lastPrint = millis();
 
-        lastControl =
-            millis();
+        Serial.print("RAW: ");
+        Serial.print(rawAngle,2);
 
+        Serial.print("  DELTA: ");
+        Serial.print(delta,2);
 
+        Serial.print("  CONT: ");
+        Serial.print(continuousAngle,2);
 
-        motionController.update(
-            phaseDetector.jointAngle(),
-            phaseDetector.phase()
-        );
-
-
-        leftODrive.setTorque(
-            motionController.leftTorque()
-        );
-
-
-        rightODrive.setTorque(
-            motionController.rightTorque()
-        );
-
-        Serial.print(
-            " TORQUE "
-        );
-
-        Serial.print(
-            motionController.leftTorque()
-        );
-
-        Serial.print(" ");
-
-        Serial.println(
-            motionController.rightTorque()
-        );
-
-
+        Serial.print("  TARGET: ");
+        Serial.println(targetTurns,4);
     }
 
-
+    lastAngle = rawAngle;
 }
