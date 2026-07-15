@@ -1,4 +1,4 @@
-﻿#include <Arduino.h>
+﻿#include <Arduino.h> 
 #include <Wire.h>
 #include <AS5600.h>
 
@@ -31,7 +31,7 @@ constexpr int RIGHT_TX = 25;
 constexpr float GEAR_RATIO = 10.4f;
 
 // период отправки команд
-constexpr uint32_t CONTROL_PERIOD = 20;
+constexpr uint32_t CONTROL_PERIOD = 1;
 
 // период печати
 constexpr uint32_t PRINT_PERIOD = 100;
@@ -204,4 +204,4 @@ void loop()
     }
 
     lastAngle = rawAngle;
-}
+} 
