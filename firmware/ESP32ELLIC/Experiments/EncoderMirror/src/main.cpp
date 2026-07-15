@@ -18,7 +18,7 @@ HardwareSerial &RightODrive = Serial2;
 
 
 //====================================================
-//                   НАСТРОЙКИ
+//                   PIN CONFIG
 //====================================================
 
 constexpr int SDA_PIN = 21;
@@ -31,16 +31,19 @@ constexpr int RIGHT_RX = 26;
 constexpr int RIGHT_TX = 25;
 
 
-// тормоза
+// тормозные ручки
+
 constexpr int LEFT_BRAKE_PIN  = 32;
 constexpr int RIGHT_BRAKE_PIN = 33;
 
 
+//====================================================
+//                   SETTINGS
+//====================================================
+
 constexpr float GEAR_RATIO = 10.4f;
 
-
-// скорость поворота
-constexpr float TURN_STEP = 0.01f;
+constexpr float TURN_STEP = 0.03f;
 
 
 constexpr uint32_t CONTROL_PERIOD = 5;
@@ -48,26 +51,41 @@ constexpr uint32_t PRINT_PERIOD = 100;
 
 
 //====================================================
-//                  ПЕРЕМЕННЫЕ
+//                   VARIABLES
 //====================================================
 
-float rawAngle = 0.0f;
-float lastAngle = 0.0f;
+float rawAngle = 0;
+float lastAngle = 0;
 
-float delta = 0.0f;
+float delta = 0;
 
-float continuousAngle = 0.0f;
+float continuousAngle = 0;
 
-float targetTurns = 0.0f;
+float targetTurns = 0;
 
 
-// смещение для поворота
+// временный поворотный offset
+
 float leftTurnOffset = 0;
 float rightTurnOffset = 0;
 
 
-bool leftActive = false;
-bool rightActive = false;
+// сохраненный offset после поворота
+
+float leftBaseOffset = 0;
+float rightBaseOffset = 0;
+
+
+// состояние поворота
+
+bool turning = false;
+
+
+// состояние ODrive
+
+bool leftClosedLoop = false;
+bool rightClosedLoop = false;
+
 
 
 unsigned long lastControl = 0;
@@ -88,11 +106,11 @@ float shortestDelta(float now, float old)
 {
     float d = now - old;
 
-    if (d > 180.0f)
-        d -= 360.0f;
+    if(d > 180)
+        d -= 360;
 
-    if (d < -180.0f)
-        d += 360.0f;
+    if(d < -180)
+        d += 360;
 
     return d;
 }
@@ -102,13 +120,13 @@ float shortestDelta(float now, float old)
 
 bool inTurnZone(float angle)
 {
-    if (angle >= 350.0f)
+    if(angle >= 350)
         return true;
 
-    if (angle <= 10.0f)
+    if(angle <= 10)
         return true;
 
-    if (angle >= 170.0f && angle <= 190.0f)
+    if(angle >= 170 && angle <= 190)
         return true;
 
     return false;
@@ -117,7 +135,10 @@ bool inTurnZone(float angle)
 
 //====================================================
 
-void sendPosition(HardwareSerial &port, float turns)
+void sendPosition(
+    HardwareSerial &port,
+    float turns
+)
 {
     char buffer[64];
 
@@ -134,7 +155,9 @@ void sendPosition(HardwareSerial &port, float turns)
 
 //====================================================
 
-void setIdle(HardwareSerial &port)
+void setIdle(
+    HardwareSerial &port
+)
 {
     port.println(
         "w axis0.requested_state 1"
@@ -144,7 +167,9 @@ void setIdle(HardwareSerial &port)
 
 //====================================================
 
-void setClosedLoop(HardwareSerial &port)
+void setClosedLoop(
+    HardwareSerial &port
+)
 {
     port.println(
         "w axis0.requested_state 8"
@@ -154,24 +179,99 @@ void setClosedLoop(HardwareSerial &port)
 
 //====================================================
 
+void enableLeft()
+{
+    if(!leftClosedLoop)
+    {
+        setClosedLoop(LeftODrive);
+        leftClosedLoop = true;
+    }
+}
+
+
+//====================================================
+
+void enableRight()
+{
+    if(!rightClosedLoop)
+    {
+        setClosedLoop(RightODrive);
+        rightClosedLoop = true;
+    }
+}
+
+
+//====================================================
+
+void disableLeft()
+{
+    if(leftClosedLoop)
+    {
+        setIdle(LeftODrive);
+        leftClosedLoop = false;
+    }
+}
+
+
+//====================================================
+
+void disableRight()
+{
+    if(rightClosedLoop)
+    {
+        setIdle(RightODrive);
+        rightClosedLoop = false;
+    }
+}
+
+
+//====================================================
+// фиксация текущего положения после поворота
+//====================================================
+
+void finishTurn()
+{
+
+    leftBaseOffset += leftTurnOffset;
+
+    rightBaseOffset += rightTurnOffset;
+
+
+    leftTurnOffset = 0;
+    rightTurnOffset = 0;
+
+
+    turning = false;
+}
+
+
+//====================================================
+
 void setup()
 {
+
     Serial.begin(115200);
+
 
     Serial.println();
     Serial.println("==============================");
-    Serial.println("ELLIC TURN TEST");
+    Serial.println("ELLIC TURN CONTROL");
     Serial.println("==============================");
 
 
-    Wire.begin(SDA_PIN, SCL_PIN);
+    Wire.begin(
+        SDA_PIN,
+        SCL_PIN
+    );
+
     Wire.setClock(100000);
 
 
     delay(300);
 
 
-    if (!encoder.begin())
+
+    if(!encoder.begin())
     {
         Serial.println("AS5600 ERROR");
 
@@ -180,7 +280,7 @@ void setup()
     }
 
 
-    if (!encoder.magnetDetected())
+    if(!encoder.magnetDetected())
     {
         Serial.println("MAGNET ERROR");
 
@@ -192,15 +292,18 @@ void setup()
     Serial.println("AS5600 OK");
 
 
+
     pinMode(
         LEFT_BRAKE_PIN,
         INPUT_PULLDOWN
     );
 
+
     pinMode(
         RIGHT_BRAKE_PIN,
         INPUT_PULLDOWN
     );
+
 
 
     LeftODrive.begin(
@@ -222,16 +325,15 @@ void setup()
     delay(1000);
 
 
+
     rawAngle = readAngle();
     lastAngle = rawAngle;
 
 
-    Serial.print("START ANGLE: ");
-    Serial.println(rawAngle);
 
+    enableLeft();
+    enableRight();
 
-    setClosedLoop(LeftODrive);
-    setClosedLoop(RightODrive);
 
 
     Serial.println("READY");
@@ -246,6 +348,7 @@ void loop()
     rawAngle = readAngle();
 
 
+
     delta = shortestDelta(
         rawAngle,
         lastAngle
@@ -253,6 +356,7 @@ void loop()
 
 
     continuousAngle += delta;
+
 
 
     targetTurns =
@@ -263,11 +367,15 @@ void loop()
 
 
     bool leftBrake =
-        digitalRead(LEFT_BRAKE_PIN);
+        digitalRead(
+            LEFT_BRAKE_PIN
+        );
 
 
     bool rightBrake =
-        digitalRead(RIGHT_BRAKE_PIN);
+        digitalRead(
+            RIGHT_BRAKE_PIN
+        );
 
 
     bool zone =
@@ -275,7 +383,8 @@ void loop()
 
 
 
-    if (millis() - lastControl >= CONTROL_PERIOD)
+
+    if(millis() - lastControl >= CONTROL_PERIOD)
     {
 
         lastControl = millis();
@@ -283,21 +392,23 @@ void loop()
 
 
         //--------------------------------------------
-        // ОБА ТОРМОЗА
+        // оба тормоза
         //--------------------------------------------
 
         if(leftBrake && rightBrake)
         {
-            setIdle(LeftODrive);
-            setIdle(RightODrive);
 
-            leftTurnOffset = 0;
-            rightTurnOffset = 0;
+            disableLeft();
+            disableRight();
+
+            turning = true;
+
         }
 
 
+
         //--------------------------------------------
-        // ЛЕВЫЙ ТОРМОЗ
+        // левый тормоз
         //--------------------------------------------
 
         else if(leftBrake)
@@ -305,30 +416,41 @@ void loop()
 
             if(zone)
             {
-                setClosedLoop(RightODrive);
+
+                turning = true;
+
+
+                disableLeft();
+                enableRight();
+
+
 
                 rightTurnOffset += TURN_STEP;
 
 
+
                 sendPosition(
                     RightODrive,
-                    rightTurnOffset
+                    -targetTurns
+                    + rightBaseOffset
+                    + rightTurnOffset
                 );
 
-
-                setIdle(LeftODrive);
             }
             else
             {
-                setIdle(LeftODrive);
-                setIdle(RightODrive);
+
+                disableLeft();
+                disableRight();
+
             }
 
         }
 
 
+
         //--------------------------------------------
-        // ПРАВЫЙ ТОРМОЗ
+        // правый тормоз
         //--------------------------------------------
 
         else if(rightBrake)
@@ -337,57 +459,74 @@ void loop()
             if(zone)
             {
 
-                setClosedLoop(LeftODrive);
+                turning = true;
+
+
+                disableRight();
+                enableLeft();
+
+
 
                 leftTurnOffset += TURN_STEP;
 
 
+
                 sendPosition(
                     LeftODrive,
-                    leftTurnOffset
+                    targetTurns
+                    + leftBaseOffset
+                    + leftTurnOffset
                 );
 
-
-                setIdle(RightODrive);
             }
             else
             {
-                setIdle(LeftODrive);
-                setIdle(RightODrive);
+
+                disableLeft();
+                disableRight();
+
             }
 
         }
 
 
+
         //--------------------------------------------
-        // НОРМАЛЬНЫЙ РЕЖИМ
+        // обычный режим
         //--------------------------------------------
 
         else
         {
 
-            leftTurnOffset = 0;
-            rightTurnOffset = 0;
+            if(turning)
+            {
+                finishTurn();
+            }
 
 
-            setClosedLoop(LeftODrive);
-            setClosedLoop(RightODrive);
+
+            enableLeft();
+            enableRight();
+
 
 
             sendPosition(
                 LeftODrive,
                 targetTurns
+                + leftBaseOffset
             );
 
 
             sendPosition(
                 RightODrive,
                 -targetTurns
+                + rightBaseOffset
             );
 
         }
 
     }
+
 
 
 
@@ -400,19 +539,32 @@ void loop()
         Serial.print("RAW:");
         Serial.print(rawAngle,2);
 
+
         Serial.print(" TARGET:");
         Serial.print(targetTurns,3);
+
 
         Serial.print(" LB:");
         Serial.print(leftBrake);
 
+
         Serial.print(" RB:");
         Serial.print(rightBrake);
 
+
         Serial.print(" Z:");
-        Serial.println(zone);
+        Serial.print(zone);
+
+
+        Serial.print(" LO:");
+        Serial.print(leftBaseOffset,3);
+
+
+        Serial.print(" RO:");
+        Serial.println(rightBaseOffset,3);
 
     }
+
 
 
     lastAngle = rawAngle;
