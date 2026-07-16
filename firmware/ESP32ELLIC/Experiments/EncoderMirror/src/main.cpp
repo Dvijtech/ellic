@@ -54,27 +54,29 @@ constexpr uint32_t PRINT_PERIOD = 100;
 //                   VARIABLES
 //====================================================
 
-float rawAngle = 0;
-float lastAngle = 0;
-
-float delta = 0;
-
-float continuousAngle = 0;
-
-float targetTurns = 0;
+// ---------- Вал (Val) ----------
+float rawAngleV = 0;
+float lastAngleV = 0;
+float deltaAngleV = 0;
+float continuousAngleV = 0;
+float targetTurnsV = 0;
 
 
 // временный поворотный offset
 
-float leftTurnOffset = 0;
-float rightTurnOffset = 0;
+// ---------- Колеса (Wheel) ----------
+float leftTurnOffsetW = 0;
+float rightTurnOffsetW = 0;
 
 
 // сохраненный offset после поворота
 
-float leftBaseOffset = 0;
-float rightBaseOffset = 0;
+float leftHoldOffsetW = 0;
+float rightHoldOffsetW = 0;
 
+// Последние отправленные команды колесам
+float leftTargetW = 0;
+float rightTargetW = 0;
 
 // состояние поворота
 
@@ -232,13 +234,12 @@ void disableRight()
 void finishTurn()
 {
 
-    leftBaseOffset += leftTurnOffset;
+    leftHoldOffsetW += leftTurnOffsetW;
+    rightHoldOffsetW += rightTurnOffsetW;
 
-    rightBaseOffset += rightTurnOffset;
 
-
-    leftTurnOffset = 0;
-    rightTurnOffset = 0;
+    leftTurnOffsetW = 0;
+    rightTurnOffsetW = 0;
 
 
     turning = false;
@@ -326,8 +327,8 @@ void setup()
 
 
 
-    rawAngle = readAngle();
-    lastAngle = rawAngle;
+    rawAngleV = readAngle();
+    lastAngleV = rawAngleV;
 
 
 
@@ -345,22 +346,22 @@ void setup()
 void loop()
 {
 
-    rawAngle = readAngle();
+    rawAngleV = readAngle();
 
 
 
-    delta = shortestDelta(
-        rawAngle,
-        lastAngle
+    deltaAngleV = shortestDelta(
+        rawAngleV,
+        lastAngleV
     );
 
 
-    continuousAngle += delta;
+    continuousAngleV += deltaAngleV;
 
 
 
-    targetTurns =
-        continuousAngle *
+    targetTurnsV =
+        continuousAngleV *
         GEAR_RATIO /
         360.0f;
 
@@ -379,7 +380,7 @@ void loop()
 
 
     bool zone =
-        inTurnZone(rawAngle);
+        inTurnZone(rawAngleV);
 
 
 
@@ -425,16 +426,16 @@ void loop()
 
 
 
-                rightTurnOffset += TURN_STEP;
+                rightTurnOffsetW += TURN_STEP;
 
 
 
-                sendPosition(
-                    RightODrive,
-                    -targetTurns
-                    + rightBaseOffset
-                    + rightTurnOffset
-                );
+                rightTargetW =
+                -targetTurnsV
+                + rightHoldOffsetW
+                + rightTurnOffsetW;
+
+                sendPosition(RightODrive, rightTargetW);
 
             }
             else
@@ -467,16 +468,16 @@ void loop()
 
 
 
-                leftTurnOffset += TURN_STEP;
+                leftTurnOffsetW += TURN_STEP;
 
 
 
-                sendPosition(
-                    LeftODrive,
-                    targetTurns
-                    + leftBaseOffset
-                    + leftTurnOffset
-                );
+                leftTargetW =
+                + targetTurnsV
+                + leftHoldOffsetW
+                + leftTurnOffsetW;
+
+                sendPosition(LeftODrive, leftTargetW);
 
             }
             else
@@ -510,18 +511,12 @@ void loop()
 
 
 
-            sendPosition(
-                LeftODrive,
-                targetTurns
-                + leftBaseOffset
-            );
+            leftTargetW = targetTurnsV + leftHoldOffsetW;
+            sendPosition(LeftODrive, leftTargetW);
 
 
-            sendPosition(
-                RightODrive,
-                -targetTurns
-                + rightBaseOffset
-            );
+            rightTargetW = -targetTurnsV + rightHoldOffsetW;
+            sendPosition(RightODrive, rightTargetW);
 
         }
 
@@ -537,11 +532,11 @@ void loop()
 
 
         Serial.print("RAW:");
-        Serial.print(rawAngle,2);
+        Serial.print(rawAngleV,2);
 
 
         Serial.print(" TARGET:");
-        Serial.print(targetTurns,3);
+        Serial.print(targetTurnsV,3);
 
 
         Serial.print(" LB:");
@@ -557,16 +552,16 @@ void loop()
 
 
         Serial.print(" LO:");
-        Serial.print(leftBaseOffset,3);
+        Serial.print(leftHoldOffsetW,3);
 
 
         Serial.print(" RO:");
-        Serial.println(rightBaseOffset,3);
+        Serial.println(rightHoldOffsetW,3);
 
     }
 
 
 
-    lastAngle = rawAngle;
+    lastAngleV = rawAngleV;
 
 }
