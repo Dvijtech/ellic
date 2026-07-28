@@ -3,7 +3,7 @@
 
 BleGamepad bleGamepad("VR_Trigger", "ESP32", 100);
 
-const int buttonPin = 4;
+const int buttonPin = 27;
 
 bool lastState = HIGH;
 

@@ -1,6 +1,7 @@
 ﻿#include <Arduino.h>
 #include <Wire.h>
 #include <AS5600.h>
+#include "BLETrigger.h"
 
 //====================================================
 //                      AS5600
@@ -41,12 +42,12 @@ constexpr int RIGHT_BRAKE_PIN = 33;
 //                   SETTINGS
 //====================================================
 
-constexpr float GEAR_RATIO = 10.4f;
+constexpr float GEAR_RATIO = 4.4f;
 
 constexpr float TURN_STEP = 0.03f;
 
 
-constexpr uint32_t CONTROL_PERIOD = 5;
+constexpr uint32_t CONTROL_PERIOD = 50;
 constexpr uint32_t PRINT_PERIOD = 100;
 
 
@@ -94,7 +95,94 @@ unsigned long lastControl = 0;
 unsigned long lastPrint = 0;
 
 
-//====================================================
+//===========добавил переменные для проверки живости ODrive=========== 
+bool leftODriveAlive = false;
+bool rightODriveAlive = false;
+
+unsigned long leftLastSeen = 0;
+unsigned long rightLastSeen = 0;
+
+constexpr uint32_t ODRIVE_CHECK_PERIOD = 1000;
+constexpr uint32_t ODRIVE_BOOT_DELAY = 1500;
+
+unsigned long lastODriveCheck = 0;
+
+
+void sendPosition(HardwareSerial &port, float turns);
+void setClosedLoop(HardwareSerial &port);
+
+//======== функция проверки живости ODrive, возвращает true если ODrive отвечает на команду ========
+
+bool checkODrive(HardwareSerial &port)
+{
+    while (port.available())
+        port.read();
+
+    port.println("r vbus_voltage");
+
+    unsigned long start = millis();
+
+    while (millis() - start < 100)
+    {
+        if (port.available())
+        {
+            String s = port.readStringUntil('\n');
+            s.trim();
+
+            if (s.length() > 0)
+                return true;
+        }
+    }
+
+    return false;
+}
+//=================добавил функцию для переинициализации ODrive, если он не отвечает========================
+
+void reinitLeftODrive()
+{
+    Serial.println("LEFT ODrive REINIT");
+
+    leftClosedLoop = false;
+
+    delay(ODRIVE_BOOT_DELAY);
+
+    float pos = targetTurnsV + leftHoldOffsetW;
+
+    sendPosition(LeftODrive, pos);
+    delay(50);
+
+    setClosedLoop(LeftODrive);
+    delay(100);
+
+    leftClosedLoop = true;
+
+    Serial.println("LEFT ODrive READY");
+}
+
+
+void reinitRightODrive()
+{
+    Serial.println("RIGHT ODrive REINIT");
+
+    rightClosedLoop = false;
+
+    delay(ODRIVE_BOOT_DELAY);
+
+    float pos = -targetTurnsV + rightHoldOffsetW;
+
+    sendPosition(RightODrive, pos);
+    delay(50);
+
+    setClosedLoop(RightODrive);
+    delay(100);
+
+    rightClosedLoop = true;
+
+    Serial.println("RIGHT ODrive READY");
+}
+
+//====
+
 
 float readAngle()
 {
@@ -265,7 +353,7 @@ void setup()
         SCL_PIN
     );
 
-    Wire.setClock(100000);
+    Wire.setClock(50000);
 
 
     delay(300);
@@ -330,12 +418,12 @@ void setup()
     rawAngleV = readAngle();
     lastAngleV = rawAngleV;
 
-
+    /// delay(5000);
 
     enableLeft();
     enableRight();
 
-
+    BLETrigger_begin();
 
     Serial.println("READY");
 }
@@ -344,7 +432,43 @@ void setup()
 //====================================================
 
 void loop()
+
 {
+
+    BLETrigger_update();
+    
+    if (millis() - lastODriveCheck >= ODRIVE_CHECK_PERIOD)
+    {
+        lastODriveCheck = millis();
+
+        bool leftNow = checkODrive(LeftODrive);
+        bool rightNow = checkODrive(RightODrive);
+
+        if (leftNow && !leftODriveAlive)
+        {
+            Serial.println("LEFT ODrive POWER RESTORED");
+            reinitLeftODrive();
+        }
+
+        if (rightNow && !rightODriveAlive)
+        {
+            Serial.println("RIGHT ODrive POWER RESTORED");
+            reinitRightODrive();
+        }
+
+        if (!leftNow)
+        {
+            leftClosedLoop = false;
+        }
+
+        if (!rightNow)
+        {
+            rightClosedLoop = false;
+        }
+
+        leftODriveAlive = leftNow;
+        rightODriveAlive = rightNow;
+    }
 
     rawAngleV = readAngle();
 
