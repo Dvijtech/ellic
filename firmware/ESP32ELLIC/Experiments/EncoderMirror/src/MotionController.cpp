@@ -31,7 +31,7 @@ void MotionController::finishTurn()
 
 void MotionController::update()
 {
-    _targetTurnsV = _encoder.continuousAngle() * _gearRatio / 360.0f;
+    _targetTurnsV = -_encoder.continuousAngle() * _gearRatio / 360.0f;
 
     if (millis() - _lastControl < _controlPeriodMs)
         return;
@@ -56,7 +56,7 @@ void MotionController::update()
             _left.disable();
             _right.enable();
 
-            _rightTurnOffsetW += _turnStep;
+            _rightTurnOffsetW -= _turnStep;
             float rightTarget = -_targetTurnsV + _rightHoldOffsetW + _rightTurnOffsetW;
             _right.sendPosition(rightTarget);
         }
