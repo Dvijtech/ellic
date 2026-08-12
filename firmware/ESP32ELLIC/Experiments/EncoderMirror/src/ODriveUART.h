@@ -25,8 +25,9 @@ public:
     void enable();
     void disable();
 
-    // Сбросить флаги при потере связи (не шлёт команды, просто локальное состояние)
-    void markDisconnected();
+    // Сбросить локальный флаг closedLoop при потере связи (не шлёт команды).
+    // _alive уже обновляется внутри pollPing() — здесь его трогать не нужно.
+    void resetClosedLoopFlag();
 
     // Полная процедура восстановления после пропадания питания
     void reinit(float targetTurns, uint32_t bootDelayMs = 1500);

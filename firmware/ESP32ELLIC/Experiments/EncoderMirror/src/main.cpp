@@ -76,7 +76,7 @@ void handleLeftPingResult()
         Debug::logOdriveReady("LEFT");
     }
 
-    if (!leftNow) leftDrive.markDisconnected();
+    if (!leftNow) leftDrive.resetClosedLoopFlag();
 
     leftAlivePrev = leftNow;
 }
@@ -93,7 +93,7 @@ void handleRightPingResult()
         Debug::logOdriveReady("RIGHT");
     }
 
-    if (!rightNow) rightDrive.markDisconnected();
+    if (!rightNow) rightDrive.resetClosedLoopFlag();
 
     rightAlivePrev = rightNow;
 }
@@ -123,7 +123,7 @@ void checkOdriveConnections()
 
     if (!leftDrive.isPinging() && !rightDrive.isPinging())
         odriveCheckPhase = OdriveCheckPhase::Idle;
-}
+}   
 
 
 

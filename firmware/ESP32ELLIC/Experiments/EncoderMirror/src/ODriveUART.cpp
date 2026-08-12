@@ -86,10 +86,9 @@ void ODriveUART::disable()
     }
 }
 
-void ODriveUART::markDisconnected()
+void ODriveUART::resetClosedLoopFlag()
 {
     _closedLoop = false;
-    _alive = false;
 }
 
 void ODriveUART::reinit(float targetTurns, uint32_t bootDelayMs)
