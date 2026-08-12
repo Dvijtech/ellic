@@ -5,36 +5,34 @@
 class ODriveUART
 {
 public:
+    ODriveUART(HardwareSerial &serial, const char *name);
 
-    ODriveUART(
-        HardwareSerial *serial,
-        float direction = 1.0f
-    );
+    void begin(uint32_t baud, int rxPin, int txPin);
 
-    void begin(
-        uint8_t rxPin,
-        uint8_t txPin
-    );
+    void sendPosition(float turns);
+    void setIdle();
+    void setClosedLoop();
 
-    //--------------------------
+    // Пингует привод, true если ответил
+    bool checkAlive();
 
-    void idle();
+    void enable();
+    void disable();
 
-    void closedLoop();
+    // Сбросить флаги при потере связи (не шлёт команды, просто локальное состояние)
+    void markDisconnected();
 
-    //--------------------------
+    // Полная процедура восстановления после пропадания питания
+    void reinit(float targetTurns, uint32_t bootDelayMs = 1500);
 
-    void setPosition(
-        float turns
-    );
-
-    void setTorque(
-        float torque
-    );
+    bool isClosedLoop() const { return _closedLoop; }
+    bool isAlive()       const { return _alive; }
+    const char *name()   const { return _name; }
 
 private:
+    HardwareSerial &_serial;
+    const char *_name;
 
-    HardwareSerial *_serial;
-
-    float _direction;
+    bool _closedLoop = false;
+    bool _alive = false;
 };

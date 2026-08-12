@@ -40,7 +40,12 @@ bb9062f 1773822208 start to razbirat components of model fusion
 PS C:\Users\Dim\YandexDisk\ELLIC\ellic> git show 642651a:"cad/fusion/PARTS/WHEELS/Wheel_d24_nonMotored.f3d" >cad/fusion/PARTS/WHEELS/Wheel_d24_nonMotored_642651a.f3d
 
 
-odrivetool
+# .venv
+cd C:\Users\Dim\YandexDisk\ELLIC\ellic
+.venv\Scripts\activate
+
+
+# odrivetool
 
 dev0.axis0.error
 dev0.axis0.motor.error

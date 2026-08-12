@@ -1,221 +1,98 @@
 #include "MotionController.h"
 
-#include <math.h>
-
-
+MotionController::MotionController(Encoder &encoder,
+                                    ODriveUART &leftDrive,
+                                    ODriveUART &rightDrive,
+                                    PhaseDetector &phase,
+                                    float gearRatio,
+                                    float turnStep,
+                                    uint32_t controlPeriodMs)
+    : _encoder(encoder), _left(leftDrive), _right(rightDrive), _phase(phase),
+      _gearRatio(gearRatio), _turnStep(turnStep), _controlPeriodMs(controlPeriodMs)
+{
+}
 
 void MotionController::begin()
 {
-
-    _leftTorque = 0;
-
-    _rightTorque = 0;
-
+    _left.enable();
+    _right.enable();
 }
 
-
-
-//----------------------------------
-// сигмоида
-//----------------------------------
-
-float MotionController::sigmoid(float x)
+void MotionController::finishTurn()
 {
+    _leftHoldOffsetW += _leftTurnOffsetW;
+    _rightHoldOffsetW += _rightTurnOffsetW;
 
-    return 
-        1.0f /
-        (1.0f + exp(-x));
+    _leftTurnOffsetW = 0;
+    _rightTurnOffsetW = 0;
 
+    _turning = false;
 }
 
-
-
-//----------------------------------
-// плавное изменение момента
-//----------------------------------
-
-float MotionController::smoothTorque(
-        float current,
-        float target
-)
+void MotionController::update()
 {
+    _targetTurnsV = _encoder.continuousAngle() * _gearRatio / 360.0f;
 
-    float diff =
-        target - current;
+    if (millis() - _lastControl < _controlPeriodMs)
+        return;
 
+    _lastControl = millis();
 
-    if(diff > _slew)
-        diff = _slew;
+    bool leftBrake = _phase.leftBrake();
+    bool rightBrake = _phase.rightBrake();
+    bool zone = PhaseDetector::inTurnZone(_encoder.rawAngle());
 
-
-    if(diff < -_slew)
-        diff = -_slew;
-
-
-
-    return current + diff;
-
-}
-
-
-
-//----------------------------------
-
-void MotionController::update(
-        float angle,
-        GaitPhase phase
-)
-{
-
-
-    //--------------------------------
-    // базовое состояние
-    //--------------------------------
-
-    _targetLeft = 0;
-
-    _targetRight = 0;
-
-
-
-    //--------------------------------
-    // помощь шагу
-    //--------------------------------
-
-
-    switch(phase)
+    if (leftBrake && rightBrake)
     {
-
-
-        //----------------------------
-
-        case GaitPhase::LEFT_START:
-        {
-
-            float k =
-                sigmoid(
-                    (15-angle)*0.25f
-                );
-
-
-            _targetLeft =
-                _maxTorque*k;
-
-
-            break;
-        }
-
-
-
-        //----------------------------
-
-        case GaitPhase::LEFT_PUSH:
-        {
-
-
-            float k =
-                sigmoid(
-                    (angle-70)*0.15f
-                );
-
-
-            _targetLeft =
-                _maxTorque*k;
-
-
-            break;
-
-        }
-
-
-
-        //----------------------------
-
-        case GaitPhase::RIGHT_START:
-        {
-
-
-            float k =
-                sigmoid(
-                    (15-angle)*0.25f
-                );
-
-
-            _targetRight =
-                _maxTorque*k;
-
-
-            break;
-
-        }
-
-
-
-        //----------------------------
-
-        case GaitPhase::RIGHT_PUSH:
-        {
-
-
-            float k =
-                sigmoid(
-                    (angle-70)*0.15f
-                );
-
-
-            _targetRight =
-                _maxTorque*k;
-
-
-            break;
-
-        }
-
-
-
-        default:
-
-            break;
-
+        _left.disable();
+        _right.disable();
+        _turning = true;
     }
+    else if (leftBrake)
+    {
+        if (zone)
+        {
+            _turning = true;
+            _left.disable();
+            _right.enable();
 
+            _rightTurnOffsetW += _turnStep;
+            float rightTarget = -_targetTurnsV + _rightHoldOffsetW + _rightTurnOffsetW;
+            _right.sendPosition(rightTarget);
+        }
+        else
+        {
+            _left.disable();
+            _right.disable();
+        }
+    }
+    else if (rightBrake)
+    {
+        if (zone)
+        {
+            _turning = true;
+            _right.disable();
+            _left.enable();
 
+            _leftTurnOffsetW += _turnStep;
+            float leftTarget = _targetTurnsV + _leftHoldOffsetW + _leftTurnOffsetW;
+            _left.sendPosition(leftTarget);
+        }
+        else
+        {
+            _left.disable();
+            _right.disable();
+        }
+    }
+    else
+    {
+        if (_turning)
+            finishTurn();
 
+        _left.enable();
+        _right.enable();
 
-    //--------------------------------
-    // плавность
-    //--------------------------------
-
-
-    _leftTorque =
-        smoothTorque(
-            _leftTorque,
-            _targetLeft
-        );
-
-
-
-    _rightTorque =
-        smoothTorque(
-            _rightTorque,
-            _targetRight
-        );
-
-
-
-}
-
-
-
-
-float MotionController::leftTorque()
-{
-    return _leftTorque;
-}
-
-
-
-float MotionController::rightTorque()
-{
-    return _rightTorque;
+        _left.sendPosition(_targetTurnsV + _leftHoldOffsetW);
+        _right.sendPosition(-_targetTurnsV + _rightHoldOffsetW);
+    }
 }

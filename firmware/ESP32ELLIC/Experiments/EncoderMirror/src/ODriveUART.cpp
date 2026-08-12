@@ -1,62 +1,95 @@
 #include "ODriveUART.h"
 
-ODriveUART::ODriveUART(
-    HardwareSerial *serial,
-    float direction)
+ODriveUART::ODriveUART(HardwareSerial &serial, const char *name)
+    : _serial(serial), _name(name)
 {
-    _serial = serial;
-    _direction = direction;
 }
 
-/////////////////////////////////////////////////////
-
-void ODriveUART::begin(
-    uint8_t rxPin,
-    uint8_t txPin)
+void ODriveUART::begin(uint32_t baud, int rxPin, int txPin)
 {
-    _serial->begin(
-        115200,
-        SERIAL_8N1,
-        rxPin,
-        txPin);
-
-    delay(300);
-
-    closedLoop();
+    _serial.begin(baud, SERIAL_8N1, rxPin, txPin);
 }
 
-/////////////////////////////////////////////////////
-
-void ODriveUART::idle()
+void ODriveUART::sendPosition(float turns)
 {
-    _serial->println("w axis0.requested_state 1");
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "w axis0.controller.input_pos %.4f", turns);
+    _serial.println(buffer);
 }
 
-/////////////////////////////////////////////////////
-
-void ODriveUART::closedLoop()
+void ODriveUART::setIdle()
 {
-    _serial->println("w axis0.requested_state 8");
+    _serial.println("w axis0.requested_state 1");
 }
 
-/////////////////////////////////////////////////////
-
-void ODriveUART::setPosition(
-    float turns)
+void ODriveUART::setClosedLoop()
 {
-    turns *= _direction;
-
-    _serial->print("p 0 ");
-    _serial->println(turns, 4);
+    _serial.println("w axis0.requested_state 8");
 }
 
-/////////////////////////////////////////////////////
-
-void ODriveUART::setTorque(
-    float torque)
+bool ODriveUART::checkAlive()
 {
-    torque *= _direction;
+    while (_serial.available())
+        _serial.read();
 
-    _serial->print("c 0 ");
-    _serial->println(torque, 3);
+    _serial.println("r vbus_voltage");
+
+    unsigned long start = millis();
+
+    while (millis() - start < 100)
+    {
+        if (_serial.available())
+        {
+            String s = _serial.readStringUntil('\n');
+            s.trim();
+
+            if (s.length() > 0)
+            {
+                _alive = true;
+                return true;
+            }
+        }
+    }
+
+    _alive = false;
+    return false;
+}
+
+void ODriveUART::enable()
+{
+    if (!_closedLoop)
+    {
+        setClosedLoop();
+        _closedLoop = true;
+    }
+}
+
+void ODriveUART::disable()
+{
+    if (_closedLoop)
+    {
+        setIdle();
+        _closedLoop = false;
+    }
+}
+
+void ODriveUART::markDisconnected()
+{
+    _closedLoop = false;
+    _alive = false;
+}
+
+void ODriveUART::reinit(float targetTurns, uint32_t bootDelayMs)
+{
+    _closedLoop = false;
+
+    delay(bootDelayMs);
+
+    sendPosition(targetTurns);
+    delay(50);
+
+    setClosedLoop();
+    delay(100);
+
+    _closedLoop = true;
 }

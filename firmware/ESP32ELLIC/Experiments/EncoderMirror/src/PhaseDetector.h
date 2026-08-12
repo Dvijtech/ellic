@@ -1,58 +1,25 @@
 #pragma once
 
-enum class ArcSide
-{
-    FRONT,
-    BACK
-};
+#include <Arduino.h>
 
-enum class GaitPhase
-{
-    STOP,
-
-    LEFT_START,
-    LEFT_PUSH,
-
-    RIGHT_START,
-    RIGHT_PUSH
-};
-
+// Тормозные ручки + определение "зоны поворота" по углу вала
 class PhaseDetector
 {
 public:
+    void begin(int leftBrakePin, int rightBrakePin);
 
-    void begin(float zeroAngle);
+    // Вызывать в каждой итерации loop()
+    void update();
 
-    void update(float encoderAngle);
+    bool leftBrake()  const { return _leftBrake; }
+    bool rightBrake() const { return _rightBrake; }
 
-    float angle();
-    float jointAngle();
-    float continuousAngle();
-
-    ArcSide side();
-    GaitPhase phase();
-
-    bool moving();
-
-    float motorTurns(float gearRatio);
+    static bool inTurnZone(float angleDeg);
 
 private:
+    int _leftPin = -1;
+    int _rightPin = -1;
 
-    float _zero = 0;
-
-    float _angle = 0;
-    float _jointAngle = 0;
-
-    float _continuous = 0;
-    float _filtered = 0;
-
-    float _lastRaw = 0;
-
-    bool _moving = false;
-
-    ArcSide _side = ArcSide::FRONT;
-    GaitPhase _phase = GaitPhase::STOP;
-
-    static constexpr float EMA_ALPHA = 0.15f;
-    static constexpr float MOVE_THRESHOLD = 2.0f;
+    bool _leftBrake = false;
+    bool _rightBrake = false;
 };
