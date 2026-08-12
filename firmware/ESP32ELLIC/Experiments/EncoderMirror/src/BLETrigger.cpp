@@ -28,7 +28,7 @@ void BLETrigger_update()
     if (!bleGamepad.isConnected())
         return;
 
-    // --- Обработка кнопки Y (нажатие на джойстик) ---
+    // --- 1. Обработка кнопки Y (нажатие SW на HW-504) ---
     bool rawButtonState = digitalRead(JOY_BTN_PIN);
 
     if (rawButtonState != lastButtonState && (millis() - lastDebounceTime) > DEBOUNCE_DELAY)
@@ -36,6 +36,7 @@ void BLETrigger_update()
         lastDebounceTime = millis();
         lastButtonState = rawButtonState;
 
+        // При нажатии 3.3V падает до 0V (LOW)
         if (rawButtonState == LOW)
         {
             bleGamepad.press(BUTTON_4); // Кнопка Y (Gamepad Face Button Top)
@@ -46,13 +47,15 @@ void BLETrigger_update()
         }
     }
 
-    // --- Обработка 4 направлений джойстика ---
+    // --- 2. Обработка осей джойстика HW-504 ---
     int xVal = analogRead(JOY_X_PIN);
     int yVal = analogRead(JOY_Y_PIN);
 
-    // Масштабирование ADC (0..4095) в диапазон осей геймпада (0..32767)
-    int16_t mappedX = map(xVal, 0, 4095, 0, 32767);
-    int16_t mappedY = map(yVal, 0, 4095, 0, 32767);
+    // Центрирование от -32767 до 32767
+    int16_t mappedX = map(xVal, 0, 4095, -32767, 32767);
+   
+    // Инверсия Y (4095..0 вместо 0..4095) для корректного инпута "вверх/вниз"
+    int16_t mappedY = map(yVal, 0, 4095, 32767, -32767);
 
     bleGamepad.setLeftThumb(mappedX, mappedY);
 }
