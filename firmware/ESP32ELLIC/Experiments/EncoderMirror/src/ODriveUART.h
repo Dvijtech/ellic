@@ -13,8 +13,14 @@ public:
     void setIdle();
     void setClosedLoop();
 
-    // Пингует привод, true если ответил
-    bool checkAlive();
+    // Неблокирующая проверка связи, разбита на два шага:
+    // 1) requestPing() — отправить запрос
+    // 2) pollPing() — вызывать в каждой итерации loop(), пока isPinging() == true
+    //    возвращает true один раз, в момент завершения проверки (получен ответ или истёк таймаут)
+    void requestPing();
+    bool pollPing();
+
+    bool isPinging() const { return _pingState == PingState::Waiting; }
 
     void enable();
     void disable();
@@ -30,6 +36,13 @@ public:
     const char *name()   const { return _name; }
 
 private:
+    enum class PingState { Idle, Waiting };
+
+    static constexpr uint32_t PING_TIMEOUT_MS = 100;
+
+    PingState _pingState = PingState::Idle;
+    unsigned long _pingStart = 0;    
+
     HardwareSerial &_serial;
     const char *_name;
 

@@ -60,15 +60,13 @@ unsigned long lastOdriveCheck = 0;
 bool leftAlivePrev = false;
 bool rightAlivePrev = false;
 
-void checkOdriveConnections()
+
+enum class OdriveCheckPhase { Idle, Pinging };
+OdriveCheckPhase odriveCheckPhase = OdriveCheckPhase::Idle;
+
+void handleLeftPingResult()
 {
-    if (millis() - lastOdriveCheck < ODRIVE_CHECK_PERIOD)
-        return;
-
-    lastOdriveCheck = millis();
-
-    bool leftNow = leftDrive.checkAlive();
-    bool rightNow = rightDrive.checkAlive();
+    bool leftNow = leftDrive.isAlive();
 
     if (leftNow && !leftAlivePrev)
     {
@@ -78,6 +76,15 @@ void checkOdriveConnections()
         Debug::logOdriveReady("LEFT");
     }
 
+    if (!leftNow) leftDrive.markDisconnected();
+
+    leftAlivePrev = leftNow;
+}
+
+void handleRightPingResult()
+{
+    bool rightNow = rightDrive.isAlive();
+
     if (rightNow && !rightAlivePrev)
     {
         Debug::logOdrivePowerRestored("RIGHT");
@@ -86,12 +93,39 @@ void checkOdriveConnections()
         Debug::logOdriveReady("RIGHT");
     }
 
-    if (!leftNow)  leftDrive.markDisconnected();
     if (!rightNow) rightDrive.markDisconnected();
 
-    leftAlivePrev = leftNow;
     rightAlivePrev = rightNow;
 }
+
+void checkOdriveConnections()
+{
+    if (odriveCheckPhase == OdriveCheckPhase::Idle)
+    {
+        if (millis() - lastOdriveCheck < ODRIVE_CHECK_PERIOD)
+            return;
+
+        lastOdriveCheck = millis();
+
+        leftDrive.requestPing();
+        rightDrive.requestPing();
+
+        odriveCheckPhase = OdriveCheckPhase::Pinging;
+        return;
+    }
+
+    // Фаза ожидания ответа — не блокирует loop(), просто опрашивает
+    if (leftDrive.pollPing())
+        handleLeftPingResult();
+
+    if (rightDrive.pollPing())
+        handleRightPingResult();
+
+    if (!leftDrive.isPinging() && !rightDrive.isPinging())
+        odriveCheckPhase = OdriveCheckPhase::Idle;
+}
+
+
 
 //====================================================
 //                     SETUP

@@ -27,33 +27,46 @@ void ODriveUART::setClosedLoop()
     _serial.println("w axis0.requested_state 8");
 }
 
-bool ODriveUART::checkAlive()
+void ODriveUART::requestPing()
 {
     while (_serial.available())
         _serial.read();
 
     _serial.println("r vbus_voltage");
 
-    unsigned long start = millis();
+    _pingStart = millis();
+    _pingState = PingState::Waiting;
+}
 
-    while (millis() - start < 100)
+bool ODriveUART::pollPing()
+{
+    if (_pingState != PingState::Waiting)
+        return false;
+
+    if (_serial.available())
     {
-        if (_serial.available())
-        {
-            String s = _serial.readStringUntil('\n');
-            s.trim();
+        String s = _serial.readStringUntil('\n');
+        s.trim();
 
-            if (s.length() > 0)
-            {
-                _alive = true;
-                return true;
-            }
+        if (s.length() > 0)
+        {
+            _alive = true;
+            _pingState = PingState::Idle;
+            return true;
         }
+        // пустая строка — ждём дальше, до таймаута
     }
 
-    _alive = false;
-    return false;
+    if (millis() - _pingStart >= PING_TIMEOUT_MS)
+    {
+        _alive = false;
+        _pingState = PingState::Idle;
+        return true;
+    }
+
+    return false; // ещё ждём
 }
+
 
 void ODriveUART::enable()
 {
