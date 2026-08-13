@@ -1,9 +1,7 @@
 #include "ODriveUART.h"
 
 ODriveUART::ODriveUART(HardwareSerial &serial, const char *name)
-    : _serial(serial), _name(name)
-{
-}
+    : _serial(serial), _name(name) {}
 
 void ODriveUART::begin(uint32_t baud, int rxPin, int txPin)
 {
@@ -17,31 +15,36 @@ void ODriveUART::sendPosition(float turns)
     _serial.println(buffer);
 }
 
-void ODriveUART::setIdle()
+void ODriveUART::setIdle()       { _serial.println("w axis0.requested_state 1"); }
+void ODriveUART::setClosedLoop() { _serial.println("w axis0.requested_state 8"); }
+
+void ODriveUART::enable()  { if (!_closedLoop) { setClosedLoop(); _closedLoop = true; } }
+void ODriveUART::disable() { if (_closedLoop)  { setIdle();       _closedLoop = false; } }
+void ODriveUART::resetClosedLoopFlag() { _closedLoop = false; }
+
+void ODriveUART::reinit(float targetTurns, uint32_t bootDelayMs)
 {
-    _serial.println("w axis0.requested_state 1");
+    _closedLoop = false;
+    delay(bootDelayMs);
+    sendPosition(targetTurns);
+    delay(50);
+    setClosedLoop();
+    delay(100);
+    _closedLoop = true;
 }
 
-void ODriveUART::setClosedLoop()
+void ODriveUART::requestFloat(const char *property)
 {
-    _serial.println("w axis0.requested_state 8");
+    while (_serial.available()) _serial.read();
+    _serial.print("r ");
+    _serial.println(property);
+    _requestStart = millis();
+    _state = State::Waiting;
 }
 
-void ODriveUART::requestPing()
+bool ODriveUART::pollFloat(float &out, bool &ok)
 {
-    while (_serial.available())
-        _serial.read();
-
-    _serial.println("r vbus_voltage");
-
-    _pingStart = millis();
-    _pingState = PingState::Waiting;
-}
-
-bool ODriveUART::pollPing()
-{
-    if (_pingState != PingState::Waiting)
-        return false;
+    if (_state != State::Waiting) return false;
 
     if (_serial.available())
     {
@@ -50,58 +53,22 @@ bool ODriveUART::pollPing()
 
         if (s.length() > 0)
         {
+            out = s.toFloat();
+            ok = true;
             _alive = true;
-            _pingState = PingState::Idle;
+            _state = State::Idle;
             return true;
         }
-        // пустая строка — ждём дальше, до таймаута
+        return false;
     }
 
-    if (millis() - _pingStart >= PING_TIMEOUT_MS)
+    if (millis() - _requestStart >= REQUEST_TIMEOUT_MS)
     {
+        ok = false;
         _alive = false;
-        _pingState = PingState::Idle;
+        _state = State::Idle;
         return true;
     }
 
-    return false; // ещё ждём
-}
-
-
-void ODriveUART::enable()
-{
-    if (!_closedLoop)
-    {
-        setClosedLoop();
-        _closedLoop = true;
-    }
-}
-
-void ODriveUART::disable()
-{
-    if (_closedLoop)
-    {
-        setIdle();
-        _closedLoop = false;
-    }
-}
-
-void ODriveUART::resetClosedLoopFlag()
-{
-    _closedLoop = false;
-}
-
-void ODriveUART::reinit(float targetTurns, uint32_t bootDelayMs)
-{
-    _closedLoop = false;
-
-    delay(bootDelayMs);
-
-    sendPosition(targetTurns);
-    delay(50);
-
-    setClosedLoop();
-    delay(100);
-
-    _closedLoop = true;
+    return false;
 }
