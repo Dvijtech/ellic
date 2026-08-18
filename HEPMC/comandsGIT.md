@@ -44,6 +44,10 @@ PS C:\Users\Dim\YandexDisk\ELLIC\ellic> git show 642651a:"cad/fusion/PARTS/WHEEL
 cd C:\Users\Dim\YandexDisk\ELLIC\ellic
 .venv\Scripts\activate
 
+# bluetooth
+cd C:\Users\Dim\YandexDisk\ELLIC\ellic\firmware\telemetry
+python ble_logger.py
+
 
 # odrivetool
 

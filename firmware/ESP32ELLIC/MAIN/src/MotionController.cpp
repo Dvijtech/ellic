@@ -38,6 +38,10 @@ void MotionController::update()
 
     _lastControl = millis();
 
+    // Не пишем в UART, пока ODrive занят ответом на telemetry-запрос
+    if (_left.isBusy() || _right.isBusy())
+        return;
+
     bool leftBrake = _phase.leftBrake();
     bool rightBrake = _phase.rightBrake();
     bool zone = PhaseDetector::inTurnZone(_encoder.rawAngle());

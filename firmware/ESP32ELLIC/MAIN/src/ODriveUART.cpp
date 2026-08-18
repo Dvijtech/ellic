@@ -1,3 +1,5 @@
+#define ODRIVE_DEBUG_RAW
+
 #include "ODriveUART.h"
 
 ODriveUART::ODriveUART(HardwareSerial &serial, const char *name)
@@ -35,6 +37,8 @@ void ODriveUART::reinit(float targetTurns, uint32_t bootDelayMs)
 
 void ODriveUART::requestFloat(const char *property)
 {
+    _lastProperty = property;
+
     while (_serial.available()) _serial.read();
     _serial.print("r ");
     _serial.println(property);
@@ -57,6 +61,12 @@ bool ODriveUART::pollFloat(float &out, bool &ok)
             ok = true;
             _alive = true;
             _state = State::Idle;
+
+#ifdef ODRIVE_DEBUG_RAW
+            Serial.print(_name); Serial.print(" ");
+            Serial.print(_lastProperty);
+            Serial.print(" -> raw:'"); Serial.print(s); Serial.println("'");
+#endif
             return true;
         }
         return false;
@@ -67,7 +77,22 @@ bool ODriveUART::pollFloat(float &out, bool &ok)
         ok = false;
         _alive = false;
         _state = State::Idle;
+
+#ifdef ODRIVE_DEBUG_RAW
+        Serial.print(_name); Serial.print(" ");
+        Serial.print(_lastProperty);
+        Serial.println(" -> TIMEOUT");
+#endif
         return true;
+    }
+
+    if (ok) {
+        _alive = true;
+        _failCount = 0;
+    } else {
+        _failCount++;
+        if (_failCount >= ALIVE_FAIL_THRESHOLD)
+            _alive = false;
     }
 
     return false;

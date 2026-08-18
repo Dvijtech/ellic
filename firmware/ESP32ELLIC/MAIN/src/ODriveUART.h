@@ -26,6 +26,9 @@ public:
     const char *name() const { return _name; }
 
 private:
+    
+    const char *_lastProperty = nullptr;
+
     enum class State { Idle, Waiting };
     static constexpr uint32_t REQUEST_TIMEOUT_MS = 50;
 
@@ -35,4 +38,7 @@ private:
     bool _alive = false;
     State _state = State::Idle;
     unsigned long _requestStart = 0;
+
+    uint8_t _failCount = 0;
+    static constexpr uint8_t ALIVE_FAIL_THRESHOLD = 5; // например, 5 подряд таймаутов
 };
