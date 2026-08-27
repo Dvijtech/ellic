@@ -39,6 +39,9 @@ bb9062f 1773822208 start to razbirat components of model fusion
 # Сохранение версии файла по пути и новому имени
 PS C:\Users\Dim\YandexDisk\ELLIC\ellic> git show 642651a:"cad/fusion/PARTS/WHEELS/Wheel_d24_nonMotored.f3d" >cad/fusion/PARTS/WHEELS/Wheel_d24_nonMotored_642651a.f3d
 
+# Сохранить тексты файлов:
+Get-ChildItem -Recurse -Include *.cpp,*.h | ForEach-Object { "=== $($_.Name) ==="; Get-Content $_.FullName; "`n" } | Out-File output.txt
+
 
 # .venv
 cd C:\Users\Dim\YandexDisk\ELLIC\ellic

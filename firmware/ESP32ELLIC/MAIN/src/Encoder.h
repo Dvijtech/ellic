@@ -4,64 +4,80 @@
 #include <Wire.h>
 #include <AS5600.h>
 
-// Обёртка над AS5600: даёт "сырой" угол 0..360 и непрерывный угол вала
+// ============================================================
+// Encoder
+// ============================================================
+//
+// Работа с AS5600, установленным на коленвале.
+//
+// Encoder отвечает только за измерение угла ВАЛА.
+//
+// valRawAngle()
+//     Абсолютный физический угол вала: 0...360°
+//
+// valContinuousAngle()
+//     Развёрнутый угол вала без скачка через 0°.
+//
+// При запуске:
+//     continuous = raw
+//
+// Калибровки, baseline, zero offset и delta отсутствуют.
+// ============================================================
+
 class Encoder
 {
 public:
-    bool begin(int sdaPin, int sclPin, uint32_t i2cClock = 50000)
-    {
-        Wire.begin(sdaPin, sclPin);
-        Wire.setClock(i2cClock);
 
-        if (!_as5600.begin())
-            return false;
+    // --------------------------------------------------------
+    // INITIALIZATION
+    // --------------------------------------------------------
 
-        if (!_as5600.magnetDetected())
-            return false;
+    bool begin(
+        int sdaPin,
+        int sclPin,
+        uint32_t i2cClock = 50000
+    );
 
-        resetBaseline();
-        return true;
-    }
+    // --------------------------------------------------------
+    // UPDATE
+    // --------------------------------------------------------
 
-    // Сбрасывает точку отсчёта дельты (без сброса continuousAngle)
-    void resetBaseline()
-    {
-        _raw = readRaw();
-        _lastRaw = _raw;
-        _delta = 0;
-    }
+    // Считать новое значение AS5600.
+    // Вызывается из loop().
+    void update();
 
-    // Вызывать в каждой итерации loop()
-    void update()
-    {
-        _raw = readRaw();
-        _delta = shortestDelta(_raw, _lastRaw);
-        _continuous += _delta;
-        _lastRaw = _raw;
-    }
+    // --------------------------------------------------------
+    // VALUES
+    // --------------------------------------------------------
 
-    float rawAngle()        const { return _raw; }
-    float delta()            const { return _delta; }
-    float continuousAngle() const { return _continuous; }
+    // Абсолютный физический угол вала: 0...360°.
+    float valRawAngle() const;
+
+    // Непрерывный угол вала без перехода 360° -> 0°.
+    float valContinuousAngle() const;
 
 private:
+
     AS5600 _as5600;
 
-    float _raw = 0;
-    float _lastRaw = 0;
-    float _delta = 0;
-    float _continuous = 0;
+    // Текущее абсолютное значение AS5600.
+    float _valRawAngle = 0.0f;
 
-    float readRaw()
-    {
-        return _as5600.readAngle() * 360.0f / 4096.0f;
-    }
+    // Предыдущее абсолютное значение AS5600.
+    // Нужно только для определения перехода через 0°.
+    float _previousRawAngle = 0.0f;
 
-    static float shortestDelta(float now, float old)
-    {
-        float d = now - old;
-        if (d > 180)  d -= 360;
-        if (d < -180) d += 360;
-        return d;
-    }
+    // Накопленный развёрнутый угол.
+    float _valContinuousAngle = 0.0f;
+
+    // --------------------------------------------------------
+    // INTERNAL
+    // --------------------------------------------------------
+
+    float readRawAngle();
+
+    static float shortestDelta(
+        float current,
+        float previous
+    );
 };

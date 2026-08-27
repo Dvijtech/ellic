@@ -14,14 +14,11 @@
 constexpr int SDA_PIN = 21;
 constexpr int SCL_PIN = 22;
 
-constexpr int LEFT_RX = 4; // желтый
-constexpr int LEFT_TX = 5; // зеленый 
+constexpr int LEFT_RX = 4;
+constexpr int LEFT_TX = 5;
 
 constexpr int RIGHT_RX = 26;
 constexpr int RIGHT_TX = 25;
-
-constexpr int LEFT_BRAKE_PIN = 32;
-constexpr int RIGHT_BRAKE_PIN = 33;
 
 // ============================================================
 // MOTION PARAMETERS
@@ -33,10 +30,7 @@ constexpr float TURN_STEP = 0.03f;
 constexpr uint32_t CONTROL_PERIOD = 50;
 
 constexpr uint32_t TELEMETRY_PERIOD = 150;
-
 constexpr uint32_t PRINT_PERIOD = 100;
-
-constexpr uint32_t ODRIVE_BOOT_DELAY = 1500;
 
 // ============================================================
 // OBJECTS
@@ -70,74 +64,6 @@ Telemetry telemetry(
     PRINT_PERIOD);
 
 // ============================================================
-// ODRIVE ALIVE STATE
-// ============================================================
-
-bool leftAlivePrev = false;
-bool rightAlivePrev = false;
-
-// ============================================================
-// ODRIVE RECOVERY
-// ============================================================
-
-void handleAliveEdges()
-{
-    // --------------------------------------------------------
-    // LEFT
-    // --------------------------------------------------------
-
-    bool leftNow = leftDrive.isAlive();
-
-    if (leftNow && !leftAlivePrev)
-    {
-        Telemetry::logOdrivePowerRestored("LEFT");
-
-        Telemetry::logOdriveReinit("LEFT");
-
-        leftDrive.reinit(
-            motion.targetTurns() +
-            motion.leftHoldOffset(),
-            ODRIVE_BOOT_DELAY);
-
-        Telemetry::logOdriveReady("LEFT");
-    }
-
-    if (!leftNow)
-    {
-        leftDrive.resetClosedLoopFlag();
-    }
-
-    leftAlivePrev = leftNow;
-
-    // --------------------------------------------------------
-    // RIGHT
-    // --------------------------------------------------------
-
-    bool rightNow = rightDrive.isAlive();
-
-    if (rightNow && !rightAlivePrev)
-    {
-        Telemetry::logOdrivePowerRestored("RIGHT");
-
-        Telemetry::logOdriveReinit("RIGHT");
-
-        rightDrive.reinit(
-            -motion.targetTurns() +
-            motion.rightHoldOffset(),
-            ODRIVE_BOOT_DELAY);
-
-        Telemetry::logOdriveReady("RIGHT");
-    }
-
-    if (!rightNow)
-    {
-        rightDrive.resetClosedLoopFlag();
-    }
-
-    rightAlivePrev = rightNow;
-}
-
-// ============================================================
 // SETUP
 // ============================================================
 
@@ -147,14 +73,18 @@ void setup()
 
     Serial.println();
     Serial.println("================================");
-    Serial.println("ELLIC TURN CONTROL");
+    Serial.println("ELLIC MOTION CONTROL");
     Serial.println("================================");
 
-    // --------------------------------------------------------
-    // AS5600
-    // --------------------------------------------------------
+    // ========================================================
+    // ENCODER
+    // ========================================================
 
-    if (!valEncoder.begin(SDA_PIN, SCL_PIN))
+    Serial.println("1 ENCODER BEGIN");
+
+    if (!valEncoder.begin(
+            SDA_PIN,
+            SCL_PIN))
     {
         Serial.println("AS5600 / MAGNET ERROR");
 
@@ -164,55 +94,54 @@ void setup()
         }
     }
 
-    // --------------------------------------------------------
-    // BRAKES / PHASE
-    // --------------------------------------------------------
+    Serial.println("2 ENCODER OK");
 
-    phase.begin(
-        LEFT_BRAKE_PIN,
-        RIGHT_BRAKE_PIN);
-
-    // --------------------------------------------------------
+    // ========================================================
     // ODRIVE UART
-    // --------------------------------------------------------
+    // ========================================================
+
+    Serial.println("3 LEFT UART BEGIN");
 
     leftDrive.begin(
         115200,
         LEFT_RX,
         LEFT_TX);
 
+    Serial.println("4 LEFT UART OK");
+
+    Serial.println("5 RIGHT UART BEGIN");
+
     rightDrive.begin(
         115200,
         RIGHT_RX,
         RIGHT_TX);
 
-    delay(1000);
+    Serial.println("6 RIGHT UART OK");
 
-    // --------------------------------------------------------
-    // ENCODER BASELINE
-    // --------------------------------------------------------
+    // ========================================================
+    // MOTION CONTROLLER
+    // ========================================================
 
-    valEncoder.resetBaseline();
-
-    // --------------------------------------------------------
-    // MOTION CONTROL
-    // --------------------------------------------------------
+    Serial.println("7 MOTION BEGIN");
 
     motion.begin();
 
-    // --------------------------------------------------------
+    Serial.println("8 MOTION OK");
+
+    // ========================================================
     // BLE
-    // --------------------------------------------------------
+    // ========================================================
+
+    Serial.println("9 BLE BEGIN");
 
     BLEconnect_begin();
 
-    // --------------------------------------------------------
-    // TELEMETRY
-    // --------------------------------------------------------
+    Serial.println("10 BLE OK");
 
-    telemetry.begin();
-
-    Serial.println("READY");
+    Serial.println();
+    Serial.println("================================");
+    Serial.println("ELLIC READY");
+    Serial.println("================================");
 }
 
 // ============================================================
@@ -222,65 +151,26 @@ void setup()
 void loop()
 {
     // --------------------------------------------------------
-    // BLE GAMEPAD
-    // --------------------------------------------------------
-
-    BLEconnect_update();
-
-    // --------------------------------------------------------
     // ENCODER
     // --------------------------------------------------------
 
     valEncoder.update();
 
     // --------------------------------------------------------
-    // PHASE / BRAKES
-    // --------------------------------------------------------
-
-    phase.update();
-
-    // --------------------------------------------------------
-    // MOTOR CONTROL
+    // MOTION CONTROLLER
     // --------------------------------------------------------
 
     motion.update();
 
     // --------------------------------------------------------
-    // TELEMETRY CONTEXT
+    // BLE
     // --------------------------------------------------------
 
-    telemetry.setContext(
-        valEncoder.rawAngle(),
-        motion.targetTurns(),
-
-        phase.leftBrake(),
-        phase.rightBrake(),
-
-        PhaseDetector::inTurnZone(
-            valEncoder.rawAngle()),
-
-        motion.isTurning(),
-
-        motion.leftHoldOffset(),
-        motion.rightHoldOffset());
+    // BLEconnect_update();
 
     // --------------------------------------------------------
-    // TELEMETRY COLLECTION
+    // TELEMETRY
     // --------------------------------------------------------
 
-    telemetry.update();
-
-    // --------------------------------------------------------
-    // COMPLETE TELEMETRY SAMPLE
-    // --------------------------------------------------------
-
-    if (telemetry.sampleReady())
-    {
-        // Передача полного пакета по BLE
-        BLEconnect_sendTelemetry(
-            telemetry.sample());
-
-        // Проверка состояния ODrive
-        handleAliveEdges();
-    }
+    // telemetry.update();
 }

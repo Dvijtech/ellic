@@ -1,24 +1,36 @@
 #include "PhaseDetector.h"
 
-void PhaseDetector::begin(int leftBrakePin, int rightBrakePin)
-{
-    _leftPin = leftBrakePin;
-    _rightPin = rightBrakePin;
+// ============================================================
+// TURN ZONE
+// ============================================================
 
-    pinMode(_leftPin, INPUT_PULLDOWN);
-    pinMode(_rightPin, INPUT_PULLDOWN);
-}
-
-void PhaseDetector::update()
+bool PhaseDetector::inTurnZone(float valRawAngle)
 {
-    _leftBrake = digitalRead(_leftPin);
-    _rightBrake = digitalRead(_rightPin);
-}
+    // --------------------------------------------------------
+    // ZONE 1
+    // --------------------------------------------------------
+    //
+    // Положение около 0° / 360°.
+    //
 
-bool PhaseDetector::inTurnZone(float angleDeg)
-{
-    if (angleDeg >= 350 || angleDeg <= 10) return true;
-    if (angleDeg >= 170 && angleDeg <= 190) return true;
+    if (valRawAngle >= 350.0f ||
+        valRawAngle <= 10.0f)
+    {
+        return true;
+    }
+
+    // --------------------------------------------------------
+    // ZONE 2
+    // --------------------------------------------------------
+    //
+    // Положение около 180°.
+    //
+
+    if (valRawAngle >= 170.0f &&
+        valRawAngle <= 190.0f)
+    {
+        return true;
+    }
 
     return false;
 }
