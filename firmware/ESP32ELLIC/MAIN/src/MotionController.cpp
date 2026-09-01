@@ -1,443 +1,257 @@
 #include "MotionController.h"
 
-// ============================================================
-// CONSTRUCTOR
-// ============================================================
-
 MotionController::MotionController(
     Encoder &encoder,
-    ODriveUART &leftDrive,
-    ODriveUART &rightDrive,
-    PhaseDetector &phase,
-    float gearRatio,
-    float turnStep,
-    uint32_t controlPeriodMs)
-
+    ODriveUART &leftODrive,
+    ODriveUART &rightODrive
+)
     : _encoder(encoder),
-      _left(leftDrive),
-      _right(rightDrive),
-      _phase(phase),
-      _gearRatio(gearRatio),
-      _turnStep(turnStep),
-      _controlPeriodMs(controlPeriodMs)
+      _leftODrive(leftODrive),
+      _rightODrive(rightODrive)
 {
 }
 
-// ============================================================
-// BEGIN
-// ============================================================
-
-void MotionController::begin()
+void MotionController::begin(
+    int leftBrakePin,
+    int rightBrakePin
+)
 {
-    _previousValAngle =
+    _leftBrakePin = leftBrakePin;
+    _rightBrakePin = rightBrakePin;
+
+    pinMode(
+        _leftBrakePin,
+        INPUT_PULLUP
+    );
+
+    pinMode(
+        _rightBrakePin,
+        INPUT_PULLUP
+    );
+
+    _previousValContinuousAngle =
         _encoder.valContinuousAngle();
 
-    _valBaseAngle =
-        _previousValAngle;
-
-    _leftBaseTarget = 0.0f;
-    _rightBaseTarget = 0.0f;
-
-    _leftTarget = 0.0f;
-    _rightTarget = 0.0f;
-
-    _leftTurnOffset = 0.0f;
-    _rightTurnOffset = 0.0f;
-
-    _valSpeedDegS = 0.0f;
-
-    _walking = false;
-    _stopped = true;
-    _turning = false;
-
-    _lastControl = millis();
-    _lastValSampleTime = millis();
-
-    // ODrive остаётся в Closed Loop.
-    //
-    // disable()/enable() не используются
-    // при обычной ходьбе и поворотах.
-
-    _left.enable();
-    _right.enable();
+    _initialized = true;
 }
-
-// ============================================================
-// READ BRAKES
-// ============================================================
-
-void MotionController::readBrakes(
-    bool &leftBrake,
-    bool &rightBrake) const
-{
-    leftBrake =
-        digitalRead(LEFT_BRAKE_PIN);
-
-    rightBrake =
-        digitalRead(RIGHT_BRAKE_PIN);
-}
-
-// ============================================================
-// UPDATE VAL SPEED
-// ============================================================
-
-void MotionController::updateValSpeed()
-{
-    uint32_t now = millis();
-
-    uint32_t dt =
-        now - _lastValSampleTime;
-
-    if (dt == 0)
-        return;
-
-    float currentAngle =
-        _encoder.valContinuousAngle();
-
-    float delta =
-        currentAngle - _previousValAngle;
-
-    _valSpeedDegS =
-        delta * 1000.0f / (float)dt;
-
-    _previousValAngle =
-        currentAngle;
-
-    _lastValSampleTime =
-        now;
-}
-
-// ============================================================
-// UPDATE STATE
-// ============================================================
-
-void MotionController::updateState()
-{
-    bool wasStopped =
-        _stopped;
-
-    float speed =
-        fabsf(_valSpeedDegS);
-
-    if (speed <= VAL_STOP_SPEED_DEG_S)
-    {
-        _stopped = true;
-        _walking = false;
-    }
-    else
-    {
-        _stopped = false;
-        _walking = true;
-    }
-
-    // --------------------------------------------------------
-    // Переход:
-    //
-    // WALKING → STOPPED
-    //
-    // Заканчивается цикл движения вала.
-    // --------------------------------------------------------
-
-    if (!wasStopped && _stopped)
-    {
-        createNewBase();
-    }
-}
-
-// ============================================================
-// CREATE NEW BASE
-// ============================================================
-
-void MotionController::createNewBase()
-{
-    // --------------------------------------------------------
-    // Запоминаем текущее командное положение колёс.
-    //
-    // Никаких команд ODrive здесь НЕ отправляем.
-    // Поэтому эта операция сама по себе
-    // физического движения не вызывает.
-    // --------------------------------------------------------
-
-    _leftBaseTarget =
-        _leftTarget;
-
-    _rightBaseTarget =
-        _rightTarget;
-
-    _valBaseAngle =
-        _encoder.valContinuousAngle();
-
-    resetTurnOffsets();
-}
-
-// ============================================================
-// RESET TURN OFFSETS
-// ============================================================
-
-void MotionController::resetTurnOffsets()
-{
-    _leftTurnOffset = 0.0f;
-    _rightTurnOffset = 0.0f;
-}
-
-// ============================================================
-// WALKING
-// ============================================================
-
-void MotionController::updateWalking()
-{
-    float relativeValAngle =
-        _encoder.valContinuousAngle() -
-        _valBaseAngle;
-
-    // --------------------------------------------------------
-    // Один оборот коленвала = один оборот колеса.
-    //
-    // Но мотор-колесо имеет редуктор 4.4:1.
-    //
-    // Поэтому:
-    //
-    // 360° вала
-    //      ↓
-    // 360° колеса
-    //      ↓
-    // 4.4 оборота мотора
-    // --------------------------------------------------------
-
-    float motorTurns =
-        relativeValAngle *
-        _gearRatio /
-        360.0f;
-
-    // --------------------------------------------------------
-    // Колёса установлены зеркально.
-    //
-    // Поэтому направление правого мотора
-    // противоположно левому.
-    // --------------------------------------------------------
-
-    _leftTarget =
-        _leftBaseTarget +
-        motorTurns +
-        _leftTurnOffset;
-
-    _rightTarget =
-        _rightBaseTarget -
-        motorTurns +
-        _rightTurnOffset;
-
-    // --------------------------------------------------------
-    // Отправляем текущую команду.
-    // --------------------------------------------------------
-
-    _left.sendPosition(
-        _leftTarget);
-
-    _right.sendPosition(
-        _rightTarget);
-}
-
-// ============================================================
-// TURNING
-// ============================================================
-
-void MotionController::updateTurning()
-{
-    bool leftBrake;
-    bool rightBrake;
-
-    readBrakes(
-        leftBrake,
-        rightBrake);
-
-    // --------------------------------------------------------
-    // Оба тормоза
-    // --------------------------------------------------------
-
-    if (leftBrake && rightBrake)
-    {
-        createNewBase();
-
-        _turning = false;
-
-        return;
-    }
-
-    // --------------------------------------------------------
-    // Проверяем фазу коленвала.
-    // --------------------------------------------------------
-
-    bool zone =
-        _phase.inTurnZone(
-            _encoder.valRawAngle());
-
-    if (!zone)  
-    {
-        _turning = false;
-
-        return;
-    }
-
-    // --------------------------------------------------------
-    // Левый тормоз
-    //
-    // Левое колесо удерживается.
-    // Правое колесо получает дополнительное движение.
-    // --------------------------------------------------------
-
-    if (leftBrake && !rightBrake)
-    {
-        _turning = true;
-
-        _rightTurnOffset -=
-            _turnStep;
-
-        _rightTarget =
-            _rightBaseTarget +
-            _rightTurnOffset;
-
-        _right.sendPosition(
-            _rightTarget);
-
-        return;
-    }
-
-    // --------------------------------------------------------
-    // Правый тормоз
-    //
-    // Правое колесо удерживается.
-    // Левое колесо получает дополнительное движение.
-    // --------------------------------------------------------
-
-    if (rightBrake && !leftBrake)
-    {
-        _turning = true;
-
-        _leftTurnOffset +=
-            _turnStep;
-
-        _leftTarget =
-            _leftBaseTarget +
-            _leftTurnOffset;
-
-        _left.sendPosition(
-            _leftTarget);
-
-        return;
-    }
-
-    _turning = false;
-}
-
-// ============================================================
-// UPDATE
-// ============================================================
 
 void MotionController::update()
 {
-    // ========================================================
-    // 1. Определяем скорость коленвала
-    // ========================================================
+    if (!_initialized)
+        return;
 
-    updateValSpeed();
+    float valDelta =
+        calculateValDelta();
 
-    // ========================================================
-    // 2. Определяем состояние
-    // ========================================================
+    bool leftBrake =
+        leftBrakePressed();
 
-    updateState();
+    bool rightBrake =
+        rightBrakePressed();
 
-    // ========================================================
-    // 3. Частота управления
-    // ========================================================
+    bool anyBrake =
+        leftBrake || rightBrake;
 
-    uint32_t now =
-        millis();
+    bool bothBrakes =
+        leftBrake && rightBrake;
 
-    if (now - _lastControl <
-        _controlPeriodMs)
+    // --------------------------------------------------------
+    // BOTH BRAKES
+    // --------------------------------------------------------
+
+    if (bothBrakes)
+    {
+        calm();
+        return;
+    }
+
+    // --------------------------------------------------------
+    // NO BRAKES
+    // --------------------------------------------------------
+
+    if (!anyBrake)
+    {
+        processNormalMotion(valDelta);
+        return;
+    }
+
+    // --------------------------------------------------------
+    // LEFT BRAKE
+    // --------------------------------------------------------
+
+    if (leftBrake)
+    {
+        processLeftBrake();
+        return;
+    }
+
+    // --------------------------------------------------------
+    // RIGHT BRAKE
+    // --------------------------------------------------------
+
+    if (rightBrake)
+    {
+        processRightBrake();
+        return;
+    }
+
+    calm();
+}
+
+bool MotionController::leftBrakePressed() const
+{
+    return digitalRead(_leftBrakePin) == LOW;
+}
+
+bool MotionController::rightBrakePressed() const
+{
+    return digitalRead(_rightBrakePin) == LOW;
+}
+
+float MotionController::calculateValDelta()
+{
+    float current =
+        _encoder.valContinuousAngle();
+
+    float delta =
+        current - _previousValContinuousAngle;
+
+    _previousValContinuousAngle =
+        current;
+
+    return delta;
+}
+
+bool MotionController::valInTurnZone(
+    float valAngle
+) const
+{
+    while (valAngle >= 360.0f)
+        valAngle -= 360.0f;
+
+    while (valAngle < 0.0f)
+        valAngle += 360.0f;
+
+    bool zoneAroundZero =
+        valAngle >=
+            (360.0f - TURN_ZONE_DEG)
+        ||
+        valAngle <= TURN_ZONE_DEG;
+
+    bool zoneAround180 =
+        valAngle >=
+            (180.0f - TURN_ZONE_DEG)
+        &&
+        valAngle <=
+            (180.0f + TURN_ZONE_DEG);
+
+    return zoneAroundZero || zoneAround180;
+}
+
+void MotionController::processNormalMotion(
+    float valDelta
+)
+{
+    float leftWheelDelta =
+        valDelta *
+        MOTOR_GEAR_RATIO /
+        360.0f *
+        LEFT_WHEEL_SIGN;
+
+    float rightWheelDelta =
+        valDelta *
+        MOTOR_GEAR_RATIO /
+        360.0f *
+        RIGHT_WHEEL_SIGN;
+
+    moveLeftWheel(leftWheelDelta);
+    moveRightWheel(rightWheelDelta);
+}
+
+void MotionController::processLeftBrake()
+{
+    float valAngle =
+        _encoder.valRawAngle();
+
+    if (!valInTurnZone(valAngle))
+    {
+        calm();
+        return;
+    }
+
+    moveLeftWheel(0.0f);
+
+    moveRightWheel(
+        TURN_STEP *
+        RIGHT_WHEEL_SIGN
+    );
+}
+
+void MotionController::processRightBrake()
+{
+    float valAngle =
+        _encoder.valRawAngle();
+
+    if (!valInTurnZone(valAngle))
+    {
+        calm();
+        return;
+    }
+
+    moveLeftWheel(
+        TURN_STEP *
+        LEFT_WHEEL_SIGN
+    );
+
+    moveRightWheel(0.0f);
+}
+
+void MotionController::calm()
+{
+    moveLeftWheel(0.0f);
+    moveRightWheel(0.0f);
+}
+
+void MotionController::moveLeftWheel(
+    float wheelDelta
+)
+{
+    float currentPosition;
+
+    if (!_leftODrive.getPosition(
+        currentPosition
+    ))
     {
         return;
     }
 
-    _lastControl =
-        now;
+    float newPosition =
+        currentPosition +
+        wheelDelta;
 
-    // ========================================================
-    // 4. Считываем тормоза
-    // ========================================================
+    _leftODrive.sendPosition(
+        newPosition
+    );
+}
 
-    bool leftBrake;
-    bool rightBrake;
+void MotionController::moveRightWheel(
+    float wheelDelta
+)
+{
+    float currentPosition;
 
-    readBrakes(
-        leftBrake,
-        rightBrake);
-
-    // ========================================================
-    // 5. ДВА ТОРМОЗА
-    //
-    // Принудительная новая база.
-    // ========================================================
-
-    if (leftBrake && rightBrake)
+    if (!_rightODrive.getPosition(
+        currentPosition
+    ))
     {
-        createNewBase();
-
-        _turning = false;
-
         return;
     }
 
-    // ========================================================
-    // 6. TURNING
-    //
-    // Поворот возможен только когда:
-    //
-    // вал остановлен
-    // +
-    // мы в turn zone
-    // +
-    // нажат один тормоз.
-    // ========================================================
+    float newPosition =
+        currentPosition +
+        wheelDelta;
 
-    bool zone =
-        _phase.inTurnZone(
-            _encoder.valRawAngle());
-
-    if (_stopped &&
-        zone &&
-        (leftBrake || rightBrake))
-    {
-        updateTurning();
-
-        return;
-    }
-
-    // ========================================================
-    // 7. WALKING
-    //
-    // Если вал движется — только ходьба.
-    // ========================================================
-
-    if (_walking)
-    {
-        _turning = false;
-
-        updateWalking();
-
-        return;
-    }
-
-    // ========================================================
-    // 8. STOPPED
-    //
-    // Вал стоит.
-    // Поворота нет.
-    //
-    // Ничего не отправляем.
-    // ODrive удерживает последнюю позицию.
-    // ========================================================
-
-    _turning = false;
+    _rightODrive.sendPosition(
+        newPosition
+    );
 }

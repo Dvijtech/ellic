@@ -5,56 +5,34 @@
 class ODriveUART
 {
 public:
-    ODriveUART(HardwareSerial &serial, const char *name);
+    ODriveUART(
+        HardwareSerial &serial,
+        const char *name
+    );
 
-    void begin(uint32_t baud, int rxPin, int txPin);
+    void begin(
+        uint32_t baud,
+        int rxPin,
+        int txPin
+    );
 
-    // --------------------------------------------------------
-    // POSITION CONTROL
-    // --------------------------------------------------------
-
-    // Передать абсолютную целевую позицию мотора в оборотах.
-    void sendPosition(float motorTurns);
-
-    // --------------------------------------------------------
-    // STATE
-    // --------------------------------------------------------
-
-    // Пока оставляем эти методы для аварийных/служебных случаев.
-    // MotionController не должен использовать их
-    // как обычный механизм управления движением.
-    void setIdle();
-    void setClosedLoop();
+    void configure();
 
     void enable();
     void disable();
 
-    // Сброс внутреннего флага после потери ODrive.
-    void resetClosedLoopFlag();
+    bool getPosition(
+        float &position
+    );
 
-    // Восстановление ODrive после перезапуска.
-    void reinit(
-        float motorTurns,
-        uint32_t bootDelayMs = 1500);
+    bool getPositionVelocity(
+        float &position,
+        float &velocity
+    );
 
-    // --------------------------------------------------------
-    // TELEMETRY
-    // --------------------------------------------------------
-
-    void requestFloat(const char *property);
-
-    bool pollFloat(
-        float &out,
-        bool &ok);
-
-    bool isBusy() const
-    {
-        return _state == State::Waiting;
-    }
-
-    // --------------------------------------------------------
-    // STATUS
-    // --------------------------------------------------------
+    void sendPosition(
+        float motorTurns
+    );
 
     bool isAlive() const
     {
@@ -68,27 +46,26 @@ public:
 
 private:
 
-    const char *_lastProperty = nullptr;
-
-    enum class State
-    {
-        Idle,
-        Waiting
-    };
-
-    static constexpr uint32_t REQUEST_TIMEOUT_MS = 50;
-
     HardwareSerial &_serial;
     const char *_name;
 
-    bool _closedLoop = false;
     bool _alive = false;
+    bool _closedLoop = false;
 
-    State _state = State::Idle;
+    static constexpr uint32_t RESPONSE_TIMEOUT_MS = 50;
 
-    uint32_t _requestStart = 0;
+    static constexpr float ODRIVE_VEL_LIMIT = 2.0f;
+    static constexpr float ODRIVE_ACCEL_LIMIT = 10.0f;
 
-    uint8_t _failCount = 0;
+    void flushInput();
 
-    static constexpr uint8_t ALIVE_FAIL_THRESHOLD = 5;
+    bool readLine(
+        String &line,
+        uint32_t timeoutMs
+    );
+
+    bool readPositionVelocity(
+        float &position,
+        float &velocity
+    );
 };

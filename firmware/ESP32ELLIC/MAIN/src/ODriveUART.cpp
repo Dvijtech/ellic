@@ -1,210 +1,228 @@
 #include "ODriveUART.h"
 
-#define ODRIVE_DEBUG_RAW
-
 ODriveUART::ODriveUART(
     HardwareSerial &serial,
-    const char *name)
+    const char *name
+)
     : _serial(serial),
       _name(name)
 {
 }
 
-// ============================================================
-// BEGIN
-// ============================================================
-
 void ODriveUART::begin(
     uint32_t baud,
     int rxPin,
-    int txPin)
+    int txPin
+)
 {
     _serial.begin(
         baud,
         SERIAL_8N1,
         rxPin,
-        txPin);
+        txPin
+    );
 }
 
-// ============================================================
-// POSITION
-// ============================================================
-
-void ODriveUART::sendPosition(float motorTurns)
+void ODriveUART::configure()
 {
-    char buffer[64];
+    flushInput();
 
-    snprintf(
-        buffer,
-        sizeof(buffer),
-        "w axis0.controller.input_pos %.4f",
-        motorTurns);
-
-    _serial.println(buffer);
-}
-
-// ============================================================
-// ODRIVE STATE
-// ============================================================
-
-void ODriveUART::setIdle()
-{
     _serial.println(
-        "w axis0.requested_state 1");
-}
+        "w axis0.controller.config.control_mode 3"
+    );
 
-void ODriveUART::setClosedLoop()
-{
+    delay(20);
+
     _serial.println(
-        "w axis0.requested_state 8");
-}
+        "w axis0.controller.config.input_mode 2"
+    );
 
-void ODriveUART::enable()
-{
-    if (!_closedLoop)
-    {
-        setClosedLoop();
-        _closedLoop = true;
-    }
-}
+    delay(20);
 
-void ODriveUART::disable()
-{
-    if (_closedLoop)
-    {
-        setIdle();
-        _closedLoop = false;
-    }
-}
+    _serial.printf(
+        "w axis0.trap_traj.config.vel_limit %.4f\n",
+        ODRIVE_VEL_LIMIT
+    );
 
-void ODriveUART::resetClosedLoopFlag()
-{
-    _closedLoop = false;
-}
+    delay(20);
 
-// ============================================================
-// REINIT
-// ============================================================
+    _serial.printf(
+        "w axis0.trap_traj.config.accel_limit %.4f\n",
+        ODRIVE_ACCEL_LIMIT
+    );
 
-void ODriveUART::reinit(
-    float motorTurns,
-    uint32_t bootDelayMs)
-{
-    _closedLoop = false;
+    delay(20);
 
-    delay(bootDelayMs);
+    _serial.printf(
+        "w axis0.trap_traj.config.decel_limit %.4f\n",
+        ODRIVE_ACCEL_LIMIT
+    );
 
-    sendPosition(motorTurns);
+    delay(20);
 
-    delay(50);
-
-    setClosedLoop();
+    _serial.println(
+        "w axis0.requested_state 8"
+    );
 
     delay(100);
 
     _closedLoop = true;
+    _alive = true;
 }
 
-// ============================================================
-// TELEMETRY REQUEST
-// ============================================================
-
-void ODriveUART::requestFloat(
-    const char *property)
+void ODriveUART::enable()
 {
-    _lastProperty = property;
+    if (_closedLoop)
+        return;
 
+    flushInput();
+
+    _serial.println(
+        "w axis0.requested_state 8"
+    );
+
+    delay(50);
+
+    _closedLoop = true;
+}
+
+void ODriveUART::disable()
+{
+    if (!_closedLoop)
+        return;
+
+    flushInput();
+
+    _serial.println(
+        "w axis0.requested_state 1"
+    );
+
+    delay(50);
+
+    _closedLoop = false;
+}
+
+bool ODriveUART::getPosition(
+    float &position
+)
+{
+    float velocity;
+
+    return getPositionVelocity(
+        position,
+        velocity
+    );
+}
+
+bool ODriveUART::getPositionVelocity(
+    float &position,
+    float &velocity
+)
+{
+    flushInput();
+
+    _serial.println("f 0");
+
+    return readPositionVelocity(
+        position,
+        velocity
+    );
+}
+
+void ODriveUART::sendPosition(
+    float motorTurns
+)
+{
+    _serial.printf(
+        "p 0 %.4f\n",
+        motorTurns
+    );
+}
+
+void ODriveUART::flushInput()
+{
     while (_serial.available())
+    {
         _serial.read();
-
-    _serial.print("r ");
-    _serial.println(property);
-
-    _requestStart = millis();
-
-    _state = State::Waiting;
+    }
 }
 
-// ============================================================
-// TELEMETRY POLL
-// ============================================================
-
-bool ODriveUART::pollFloat(
-    float &out,
-    bool &ok)
+bool ODriveUART::readLine(
+    String &line,
+    uint32_t timeoutMs
+)
 {
-    if (_state != State::Waiting)
-        return false;
+    uint32_t start = millis();
 
-    // --------------------------------------------------------
-    // RESPONSE RECEIVED
-    // --------------------------------------------------------
+    line = "";
 
-    if (_serial.available())
+    while (
+        millis() - start <
+        timeoutMs
+    )
     {
-        String s =
-            _serial.readStringUntil('\n');
-
-        s.trim();
-
-        if (s.length() > 0)
+        while (_serial.available())
         {
-            out = s.toFloat();
+            char c = _serial.read();
 
-            ok = true;
+            if (c == '\n')
+            {
+                line.trim();
 
-            _alive = true;
-            _failCount = 0;
+                return line.length() > 0;
+            }
 
-            _state = State::Idle;
-
-#ifdef ODRIVE_DEBUG_RAW
-
-            Serial.print(_name);
-            Serial.print(" ");
-            Serial.print(_lastProperty);
-            Serial.print(" -> raw:'");
-            Serial.print(s);
-            Serial.println("'");
-
-#endif
-
-            return true;
+            if (c != '\r')
+            {
+                line += c;
+            }
         }
 
-        return false;
-    }
-
-    // --------------------------------------------------------
-    // TIMEOUT
-    // --------------------------------------------------------
-
-    if (millis() - _requestStart >=
-        REQUEST_TIMEOUT_MS)
-    {
-        ok = false;
-
-        _failCount++;
-
-        if (_failCount >=
-            ALIVE_FAIL_THRESHOLD)
-        {
-            _alive = false;
-        }
-
-        _state = State::Idle;
-
-#ifdef ODRIVE_DEBUG_RAW
-
-        Serial.print(_name);
-        Serial.print(" ");
-        Serial.print(_lastProperty);
-        Serial.println(" -> TIMEOUT");
-
-#endif
-
-        return true;
+        delay(1);
     }
 
     return false;
+}
+
+bool ODriveUART::readPositionVelocity(
+    float &position,
+    float &velocity
+)
+{
+    String line;
+
+    if (!readLine(
+        line,
+        RESPONSE_TIMEOUT_MS
+    ))
+    {
+        _alive = false;
+        return false;
+    }
+
+    int separator = line.indexOf(' ');
+
+    if (separator < 0)
+    {
+        _alive = false;
+        return false;
+    }
+
+    String positionString =
+        line.substring(
+            0,
+            separator
+        );
+
+    String velocityString =
+        line.substring(
+            separator + 1
+        );
+
+    position = positionString.toFloat();
+    velocity = velocityString.toFloat();
+
+    _alive = true;
+
+    return true;
 }

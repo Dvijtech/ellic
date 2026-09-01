@@ -2,66 +2,66 @@
 
 #include "Encoder.h"
 #include "ODriveUART.h"
-#include "PhaseDetector.h"
 #include "MotionController.h"
-#include "Telemetry.h"
-#include "BLEconnect.h"
 
 // ============================================================
 // PINS
 // ============================================================
 
-constexpr int SDA_PIN = 21;
-constexpr int SCL_PIN = 22;
+constexpr int ENCODER_SDA_PIN = 21;
+constexpr int ENCODER_SCL_PIN = 22;
 
-constexpr int LEFT_RX = 4;
-constexpr int LEFT_TX = 5;
+constexpr int LEFT_RX_PIN = 4;
+constexpr int LEFT_TX_PIN = 5;
 
-constexpr int RIGHT_RX = 26;
-constexpr int RIGHT_TX = 25;
+constexpr int RIGHT_RX_PIN = 26;
+constexpr int RIGHT_TX_PIN = 25;
 
-// ============================================================
-// MOTION PARAMETERS
-// ============================================================
-
-constexpr float GEAR_RATIO = 4.4f;
-constexpr float TURN_STEP = 0.03f;
-
-constexpr uint32_t CONTROL_PERIOD = 50;
-
-constexpr uint32_t TELEMETRY_PERIOD = 150;
-constexpr uint32_t PRINT_PERIOD = 100;
+constexpr int LEFT_BRAKE_PIN = 32;
+constexpr int RIGHT_BRAKE_PIN = 33;
 
 // ============================================================
-// OBJECTS
+// UART
 // ============================================================
 
-Encoder valEncoder;
+constexpr uint32_t ODRIVE_BAUD = 115200;
 
-ODriveUART leftDrive(
-    Serial1,
-    "LEFT");
+// ============================================================
+// CONTROL
+// ============================================================
 
-ODriveUART rightDrive(
-    Serial2,
-    "RIGHT");
+constexpr uint32_t CONTROL_PERIOD_MS = 100;
 
-PhaseDetector phase;
+// ============================================================
+// HARDWARE OBJECTS
+// ============================================================
 
-MotionController motion(
-    valEncoder,
-    leftDrive,
-    rightDrive,
-    phase,
-    GEAR_RATIO,
-    TURN_STEP,
-    CONTROL_PERIOD);
+HardwareSerial LeftSerial(1);
+HardwareSerial RightSerial(2);
 
-Telemetry telemetry(
-    leftDrive,
-    rightDrive,
-    TELEMETRY_PERIOD,
-    PRINT_PERIOD);
+Encoder encoder;
+
+ODriveUART leftODrive(
+    LeftSerial,
+    "LEFT"
+);
+
+ODriveUART rightODrive(
+    RightSerial,
+    "RIGHT"
+);
+
+MotionController motionController(
+    encoder,
+    leftODrive,
+    rightODrive
+);
+
+// ============================================================
+// CONTROL TIMER
+// ============================================================
+
+uint32_t lastControlTime = 0;
 
 // ============================================================
 // SETUP
@@ -71,22 +71,25 @@ void setup()
 {
     Serial.begin(115200);
 
+    delay(500);
+
     Serial.println();
     Serial.println("================================");
     Serial.println("ELLIC MOTION CONTROL");
     Serial.println("================================");
 
-    // ========================================================
+    // --------------------------------------------------------
     // ENCODER
-    // ========================================================
+    // --------------------------------------------------------
 
     Serial.println("1 ENCODER BEGIN");
 
-    if (!valEncoder.begin(
-            SDA_PIN,
-            SCL_PIN))
+    if (!encoder.begin(
+        ENCODER_SDA_PIN,
+        ENCODER_SCL_PIN
+    ))
     {
-        Serial.println("AS5600 / MAGNET ERROR");
+        Serial.println("ENCODER ERROR");
 
         while (true)
         {
@@ -96,52 +99,68 @@ void setup()
 
     Serial.println("2 ENCODER OK");
 
-    // ========================================================
-    // ODRIVE UART
-    // ========================================================
+    // --------------------------------------------------------
+    // LEFT ODRIVE
+    // --------------------------------------------------------
 
     Serial.println("3 LEFT UART BEGIN");
 
-    leftDrive.begin(
-        115200,
-        LEFT_RX,
-        LEFT_TX);
+    leftODrive.begin(
+        ODRIVE_BAUD,
+        LEFT_RX_PIN,
+        LEFT_TX_PIN
+    );
 
     Serial.println("4 LEFT UART OK");
 
+    // --------------------------------------------------------
+    // RIGHT ODRIVE
+    // --------------------------------------------------------
+
     Serial.println("5 RIGHT UART BEGIN");
 
-    rightDrive.begin(
-        115200,
-        RIGHT_RX,
-        RIGHT_TX);
+    rightODrive.begin(
+        ODRIVE_BAUD,
+        RIGHT_RX_PIN,
+        RIGHT_TX_PIN
+    );
 
     Serial.println("6 RIGHT UART OK");
 
-    // ========================================================
-    // MOTION CONTROLLER
-    // ========================================================
+    // --------------------------------------------------------
+    // ODRIVE CONFIGURATION
+    // --------------------------------------------------------
 
-    Serial.println("7 MOTION BEGIN");
+    Serial.println("7 ODRIVE CONFIG BEGIN");
 
-    motion.begin();
+    leftODrive.configure();
+    rightODrive.configure();
 
-    Serial.println("8 MOTION OK");
+    Serial.println("8 ODRIVE CONFIG OK");
 
-    // ========================================================
-    // BLE
-    // ========================================================
+    // --------------------------------------------------------
+    // MOTION
+    // --------------------------------------------------------
 
-    Serial.println("9 BLE BEGIN");
+    Serial.println("9 MOTION BEGIN");
 
-    BLEconnect_begin();
+    motionController.begin(
+        LEFT_BRAKE_PIN,
+        RIGHT_BRAKE_PIN
+    );
 
-    Serial.println("10 BLE OK");
+    Serial.println("10 MOTION OK");
+
+    // --------------------------------------------------------
+    // READY
+    // --------------------------------------------------------
 
     Serial.println();
     Serial.println("================================");
     Serial.println("ELLIC READY");
     Serial.println("================================");
+
+    lastControlTime = millis();
 }
 
 // ============================================================
@@ -154,23 +173,22 @@ void loop()
     // ENCODER
     // --------------------------------------------------------
 
-    valEncoder.update();
+    encoder.update();
 
     // --------------------------------------------------------
-    // MOTION CONTROLLER
+    // CONTROL
     // --------------------------------------------------------
 
-    motion.update();
+    uint32_t now = millis();
 
-    // --------------------------------------------------------
-    // BLE
-    // --------------------------------------------------------
+    if (
+        now - lastControlTime >=
+        CONTROL_PERIOD_MS
+    )
+    {
+        lastControlTime +=
+            CONTROL_PERIOD_MS;
 
-    // BLEconnect_update();
-
-    // --------------------------------------------------------
-    // TELEMETRY
-    // --------------------------------------------------------
-
-    // telemetry.update();
+        motionController.update();
+    }
 }
