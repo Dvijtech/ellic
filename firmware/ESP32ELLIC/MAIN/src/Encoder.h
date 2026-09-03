@@ -1,83 +1,43 @@
-#pragma once
+#ifndef ENCODER_H
+#define ENCODER_H
 
 #include <Arduino.h>
-#include <Wire.h>
-#include <AS5600.h>
 
-// ============================================================
-// Encoder
-// ============================================================
-//
-// Работа с AS5600, установленным на коленвале.
-//
-// Encoder отвечает только за измерение угла ВАЛА.
-//
-// valRawAngle()
-//     Абсолютный физический угол вала: 0...360°
-//
-// valContinuousAngle()
-//     Развёрнутый угол вала без скачка через 0°.
-//
-// При запуске:
-//     continuous = raw
-//
-// Калибровки, baseline, zero offset и delta отсутствуют.
-// ============================================================
+class Telemetry;
 
-class Encoder
-{
+struct EncoderSnapshot {
+    float rawAngle;         // последний валидный raw-угол AS5600, 0..360°
+    float continuousAngle;  // накопленный (безразрывный) угол вала
+    float lastDelta;        // последняя учтённая дельта (по проходу loop())
+};
+
+class Encoder {
 public:
+    static const uint8_t AS5600_I2C_ADDRESS = 0x36;
+    static const uint8_t AS5600_RAW_ANGLE_REG = 0x0C;
 
-    // --------------------------------------------------------
-    // INITIALIZATION
-    // --------------------------------------------------------
+    Encoder();
 
-    bool begin(
-        int sdaPin,
-        int sclPin,
-        uint32_t i2cClock = 50000
-    );
+    void setTelemetry(Telemetry* telemetry);
 
-    // --------------------------------------------------------
-    // UPDATE
-    // --------------------------------------------------------
+    void begin();
+    void update(); // вызывается на каждом проходе loop(), без периода
 
-    // Считать новое значение AS5600.
-    // Вызывается из loop().
-    void update();
+    float getRawAngle() const;        // последний валидный raw-угол, 0..360°
+    float getContinuousAngle() const; // накопленный угол
 
-    // --------------------------------------------------------
-    // VALUES
-    // --------------------------------------------------------
-
-    // Абсолютный физический угол вала: 0...360°.
-    float valRawAngle() const;
-
-    // Непрерывный угол вала без перехода 360° -> 0°.
-    float valContinuousAngle() const;
+    EncoderSnapshot getSnapshot() const;
 
 private:
+    Telemetry* _telemetry;
 
-    AS5600 _as5600;
+    float _rawAngle;
+    float _previousRawAngle;
+    float _continuousAngle;
+    float _lastDelta;
+    bool  _initialized;
 
-    // Текущее абсолютное значение AS5600.
-    float _valRawAngle = 0.0f;
-
-    // Предыдущее абсолютное значение AS5600.
-    // Нужно только для определения перехода через 0°.
-    float _previousRawAngle = 0.0f;
-
-    // Накопленный развёрнутый угол.
-    float _valContinuousAngle = 0.0f;
-
-    // --------------------------------------------------------
-    // INTERNAL
-    // --------------------------------------------------------
-
-    float readRawAngle();
-
-    static float shortestDelta(
-        float current,
-        float previous
-    );
+    bool readRawAngleFromSensor(float &outAngleDeg);
 };
+
+#endif

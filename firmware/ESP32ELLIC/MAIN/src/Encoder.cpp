@@ -1,159 +1,85 @@
 #include "Encoder.h"
+#include "Telemetry.h"
+#include <Wire.h>
 
-// ============================================================
-// BEGIN
-// ============================================================
-
-bool Encoder::begin(
-    int sdaPin,
-    int sclPin,
-    uint32_t i2cClock
-)
+Encoder::Encoder()
+: _telemetry(nullptr),
+  _rawAngle(0.0f),
+  _previousRawAngle(0.0f),
+  _continuousAngle(0.0f),
+  _lastDelta(0.0f),
+  _initialized(false)
 {
-    // --------------------------------------------------------
-    // I2C
-    // --------------------------------------------------------
+}
 
-    Wire.begin(
-        sdaPin,
-        sclPin
-    );
+void Encoder::setTelemetry(Telemetry* telemetry) {
+    _telemetry = telemetry;
+}
 
-    Wire.setClock(i2cClock);
+void Encoder::begin() {
+    // Wire.begin()/Wire.setClock() выполняются один раз в main.cpp::setup(),
+    // так как I2C-шина общая для системы; Encoder её не инициализирует.
+}
 
-    // --------------------------------------------------------
-    // AS5600
-    // --------------------------------------------------------
-
-    if (!_as5600.begin())
-    {
+bool Encoder::readRawAngleFromSensor(float &outAngleDeg) {
+    Wire.beginTransmission(AS5600_I2C_ADDRESS);
+    Wire.write(AS5600_RAW_ANGLE_REG);
+    if (Wire.endTransmission(false) != 0) {
         return false;
     }
 
-    // Проверяем наличие магнита.
-    if (!_as5600.magnetDetected())
-    {
+    uint8_t got = Wire.requestFrom((int)AS5600_I2C_ADDRESS, 2);
+    if (got < 2 || Wire.available() < 2) {
         return false;
     }
 
-    // --------------------------------------------------------
-    // INITIAL ANGLE
-    // --------------------------------------------------------
-    //
-    // Никакой калибровки нет.
-    //
-    // Текущее положение вала при включении является
-    // начальной точкой continuousAngle.
-    // --------------------------------------------------------
+    uint16_t hi = Wire.read();
+    uint16_t lo = Wire.read();
+    uint16_t raw = ((hi << 8) | lo) & 0x0FFF; // 12 бит
 
-    _valRawAngle = readRawAngle();
-
-    _previousRawAngle = _valRawAngle;
-
-    _valContinuousAngle = _valRawAngle;
-
+    outAngleDeg = (raw * 360.0f) / 4096.0f;
     return true;
 }
 
-// ============================================================
-// UPDATE
-// ============================================================
+void Encoder::update() {
+    float newRaw;
+    bool ok = readRawAngleFromSensor(newRaw);
 
-void Encoder::update()
-{
-    float currentRawAngle = readRawAngle();
-
-    // --------------------------------------------------------
-    // ABSOLUTE ANGLE
-    // --------------------------------------------------------
-
-    _valRawAngle = currentRawAngle;
-
-    // --------------------------------------------------------
-    // CONTINUOUS ANGLE
-    // --------------------------------------------------------
-    //
-    // AS5600 работает в диапазоне:
-    //
-    //     0 ... 360°
-    //
-    // Поэтому при прохождении через 0° необходимо учитывать
-    // направление перехода.
-    //
-    // Например:
-    //
-    //     359° -> 0°
-    //
-    // означает движение ещё на +1°, а не -359°.
-    //
-    // Или:
-    //
-    //     1° -> 359°
-    //
-    // означает движение на -2°, а не +358°.
-    // --------------------------------------------------------
-
-    float delta = shortestDelta(
-        currentRawAngle,
-        _previousRawAngle
-    );
-
-    _valContinuousAngle += delta;
-
-    // --------------------------------------------------------
-    // SAVE
-    // --------------------------------------------------------
-
-    _previousRawAngle = currentRawAngle;
-}
-
-// ============================================================
-// VAL RAW ANGLE
-// ============================================================
-
-float Encoder::valRawAngle() const
-{
-    return _valRawAngle;
-}
-
-// ============================================================
-// VAL CONTINUOUS ANGLE
-// ============================================================
-
-float Encoder::valContinuousAngle() const
-{
-    return _valContinuousAngle;
-}
-
-// ============================================================
-// READ RAW ANGLE
-// ============================================================
-
-float Encoder::readRawAngle()
-{
-    return _as5600.readAngle() * 360.0f / 4096.0f;
-}
-
-// ============================================================
-// SHORTEST DELTA
-// ============================================================
-
-float Encoder::shortestDelta(
-    float current,
-    float previous
-)
-{
-    float delta = current - previous;
-
-    if (delta > 180.0f)
-    {
-        delta -= 360.0f;
+    if (!ok) {
+        // 6.3: continuousAngle и previousRawAngle НЕ обновляются
+        if (_telemetry) {
+            _telemetry->log(LogLevel::WARNING, "Encoder", "AS5600 read error (I2C < 2 bytes)");
+        }
+        return;
     }
 
-    if (delta < -180.0f)
-    {
-        delta += 360.0f;
+    if (!_initialized) {
+        // Первый валидный отсчёт: только инициализация, без вычисления дельты
+        _previousRawAngle = newRaw;
+        _rawAngle = newRaw;
+        _continuousAngle = 0.0f;
+        _lastDelta = 0.0f;
+        _initialized = true;
+        return;
     }
 
-    return delta;
+    float delta = newRaw - _previousRawAngle;
+    if (delta > 180.0f)  delta -= 360.0f;
+    if (delta < -180.0f) delta += 360.0f;
+
+    _continuousAngle += delta;
+    _previousRawAngle = newRaw;
+    _rawAngle = newRaw;
+    _lastDelta = delta;
+}
+
+float Encoder::getRawAngle() const { return _rawAngle; }
+float Encoder::getContinuousAngle() const { return _continuousAngle; }
+
+EncoderSnapshot Encoder::getSnapshot() const {
+    EncoderSnapshot s;
+    s.rawAngle = _rawAngle;
+    s.continuousAngle = _continuousAngle;
+    s.lastDelta = _lastDelta;
+    return s;
 }

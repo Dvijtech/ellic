@@ -1,194 +1,70 @@
 ﻿#include <Arduino.h>
-
+#include <Wire.h>
 #include "Encoder.h"
-#include "ODriveUART.h"
 #include "MotionController.h"
+#include "ODriveUART.h"
+#include "Telemetry.h"
 
-// ============================================================
-// PINS
-// ============================================================
+// AS5600 (I2C)
+static const int AS5600_SDA_PIN = 21;
+static const int AS5600_SCL_PIN = 22;
+static const uint32_t I2C_CLOCK_HZ = 50000;
 
-constexpr int ENCODER_SDA_PIN = 21;
-constexpr int ENCODER_SCL_PIN = 22;
-
-constexpr int LEFT_RX_PIN = 4;
-constexpr int LEFT_TX_PIN = 5;
-
-constexpr int RIGHT_RX_PIN = 26;
-constexpr int RIGHT_TX_PIN = 25;
-
-constexpr int LEFT_BRAKE_PIN = 32;
-constexpr int RIGHT_BRAKE_PIN = 33;
-
-// ============================================================
-// UART
-// ============================================================
-
-constexpr uint32_t ODRIVE_BAUD = 115200;
-
-// ============================================================
-// CONTROL
-// ============================================================
-
-constexpr uint32_t CONTROL_PERIOD_MS = 100;
-
-// ============================================================
-// HARDWARE OBJECTS
-// ============================================================
-
-HardwareSerial LeftSerial(1);
-HardwareSerial RightSerial(2);
+// LEFT ODrive UART
+static const int LEFT_ODRIVE_RX_PIN = 4;
+static const int LEFT_ODRIVE_TX_PIN = 5;
+// RIGHT ODrive UART
+static const int RIGHT_ODRIVE_RX_PIN = 26;
+static const int RIGHT_ODRIVE_TX_PIN = 25;
+static const uint32_t ODRIVE_BAUD = 115200;
 
 Encoder encoder;
+ODriveUART leftOdrive(Serial1, LEFT_ODRIVE_RX_PIN, LEFT_ODRIVE_TX_PIN, ODRIVE_BAUD, "LEFT");
+ODriveUART rightOdrive(Serial2, RIGHT_ODRIVE_RX_PIN, RIGHT_ODRIVE_TX_PIN, ODRIVE_BAUD, "RIGHT");
+MotionController motionController(encoder, leftOdrive, rightOdrive);
+Telemetry telemetry(encoder, motionController, leftOdrive, rightOdrive);
 
-ODriveUART leftODrive(
-    LeftSerial,
-    "LEFT"
-);
+uint32_t lastControlMs = 0;
 
-ODriveUART rightODrive(
-    RightSerial,
-    "RIGHT"
-);
-
-MotionController motionController(
-    encoder,
-    leftODrive,
-    rightODrive
-);
-
-// ============================================================
-// CONTROL TIMER
-// ============================================================
-
-uint32_t lastControlTime = 0;
-
-// ============================================================
-// SETUP
-// ============================================================
-
-void setup()
-{
+void setup() {
     Serial.begin(115200);
 
-    delay(500);
+    Wire.begin(AS5600_SDA_PIN, AS5600_SCL_PIN);
+    Wire.setClock(I2C_CLOCK_HZ);
 
-    Serial.println();
-    Serial.println("================================");
-    Serial.println("ELLIC MOTION CONTROL");
-    Serial.println("================================");
+    encoder.setTelemetry(&telemetry);
+    motionController.setTelemetry(&telemetry);
+    leftOdrive.setTelemetry(&telemetry);
+    rightOdrive.setTelemetry(&telemetry);
 
-    // --------------------------------------------------------
-    // ENCODER
-    // --------------------------------------------------------
+    encoder.begin();
+    leftOdrive.begin();
+    rightOdrive.begin();
+    motionController.begin();
+    telemetry.begin();
 
-    Serial.println("1 ENCODER BEGIN");
+    telemetry.log(LogLevel::INFO, "main", "ELLIC system initialized");
 
-    if (!encoder.begin(
-        ENCODER_SDA_PIN,
-        ENCODER_SCL_PIN
-    ))
-    {
-        Serial.println("ENCODER ERROR");
+    lastControlMs = millis();
 
-        while (true)
-        {
-            delay(1000);
-        }
-    }
-
-    Serial.println("2 ENCODER OK");
-
-    // --------------------------------------------------------
-    // LEFT ODRIVE
-    // --------------------------------------------------------
-
-    Serial.println("3 LEFT UART BEGIN");
-
-    leftODrive.begin(
-        ODRIVE_BAUD,
-        LEFT_RX_PIN,
-        LEFT_TX_PIN
-    );
-
-    Serial.println("4 LEFT UART OK");
-
-    // --------------------------------------------------------
-    // RIGHT ODRIVE
-    // --------------------------------------------------------
-
-    Serial.println("5 RIGHT UART BEGIN");
-
-    rightODrive.begin(
-        ODRIVE_BAUD,
-        RIGHT_RX_PIN,
-        RIGHT_TX_PIN
-    );
-
-    Serial.println("6 RIGHT UART OK");
-
-    // --------------------------------------------------------
-    // ODRIVE CONFIGURATION
-    // --------------------------------------------------------
-
-    Serial.println("7 ODRIVE CONFIG BEGIN");
-
-    leftODrive.configure();
-    rightODrive.configure();
-
-    Serial.println("8 ODRIVE CONFIG OK");
-
-    // --------------------------------------------------------
-    // MOTION
-    // --------------------------------------------------------
-
-    Serial.println("9 MOTION BEGIN");
-
-    motionController.begin(
-        LEFT_BRAKE_PIN,
-        RIGHT_BRAKE_PIN
-    );
-
-    Serial.println("10 MOTION OK");
-
-    // --------------------------------------------------------
-    // READY
-    // --------------------------------------------------------
-
-    Serial.println();
-    Serial.println("================================");
-    Serial.println("ELLIC READY");
-    Serial.println("================================");
-
-    lastControlTime = millis();
+    // Раздел 10.1: явный configure() из setup() отключён (не вызывается).
+    // Конфигурация ODrive выполняется автоматически через updateConfigure() в loop().
 }
 
-// ============================================================
-// LOOP
-// ============================================================
-
-void loop()
-{
-    // --------------------------------------------------------
-    // ENCODER
-    // --------------------------------------------------------
-
+void loop() {
     encoder.update();
 
-    // --------------------------------------------------------
-    // CONTROL
-    // --------------------------------------------------------
+    leftOdrive.update();
+    rightOdrive.update();
+
+    leftOdrive.updateConfigure();
+    rightOdrive.updateConfigure();
 
     uint32_t now = millis();
-
-    if (
-        now - lastControlTime >=
-        CONTROL_PERIOD_MS
-    )
-    {
-        lastControlTime +=
-            CONTROL_PERIOD_MS;
-
+    if (now - lastControlMs >= MotionController::CONTROL_PERIOD_MS) {
+        lastControlMs = now;
         motionController.update();
     }
+
+    telemetry.update();
 }
