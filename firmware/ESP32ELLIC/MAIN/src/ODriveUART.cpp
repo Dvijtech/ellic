@@ -28,7 +28,9 @@ ODriveUART::ODriveUART(HardwareSerial &serial, uint8_t rxPin, uint8_t txPin, con
       _Iq(0.0f),
       _Vq(0.0f),
       _velEstimate(0.0f),
-      _diagnosticsTimestampMs(0) {
+      _diagnosticsTimestampMs(0),
+      _moveRecoveryRequired(false)
+{
     _rxBuffer[0] = '\0';
 }
 
@@ -127,28 +129,50 @@ bool ODriveUART::waitForResponse(char* outBuf, size_t bufSize) {
 // =======================================================================
 
 bool ODriveUART::moveWheel(float delta) {
-    // Раздел 14.2.3: если сейчас идёт чужой (диагностика/конфигурация) обмен,
-    // MoveWheel дожидается его завершения (успех или таймаут RESPONSE_TIMEOUT_MS),
-    // но не прерывает и не отменяет его - только после этого начинает f0.
+    // 1. Дождаться завершения любого текущего обмена (приоритет выше)
     if (_requestPending) {
         char discard[64];
         waitForResponse(discard, sizeof(discard));
     }
 
-    // f 0 -> currentPosition
+    // 2. Режим восстановления после предыдущего неудачного f 0
+    if (_moveRecoveryRequired) {
+        // Отправляем только f 0 (без p 0)
+        sendRequestAsync("f 0\n");
+        char buf[64];
+        if (!waitForResponse(buf, sizeof(buf))) {
+            // Восстановление не удалось – флаг остаётся true
+            if (_telemetry != nullptr) {
+                _telemetry->log(LogLevel::WARNING, _label, "MoveWheel recovery: f0 timeout, recovery failed");
+            }
+            return false;
+        }
+        // Успешный ответ – сбрасываем флаг
+        _moveRecoveryRequired = false;
+        if (_telemetry != nullptr) {
+            _telemetry->log(LogLevel::INFO, _label, "MoveWheel recovery: f0 success, recovery done");
+        }
+        return true;   // восстановление выполнено, но движения нет
+    }
+
+    // 3. Обычный ход: f 0 -> currentPosition -> p 0
     sendRequestAsync("f 0\n");
     char buf[64];
     if (!waitForResponse(buf, sizeof(buf))) {
+        // Таймаут – требуется восстановление
+        _moveRecoveryRequired = true;
         if (_telemetry != nullptr) {
-            _telemetry->log(LogLevel::WARNING, _label, "MoveWheel: f0 timeout, p0 skipped");
+            _telemetry->log(LogLevel::WARNING, _label, "MoveWheel: f0 timeout, recovery required");
         }
         return false;
     }
 
     float currentPosition, currentVelocity;
     if (sscanf(buf, "%f %f", &currentPosition, &currentVelocity) != 2) {
+        // Ошибка парсинга – тоже считаем, что связь нарушена
+        _moveRecoveryRequired = true;
         if (_telemetry != nullptr) {
-            _telemetry->log(LogLevel::WARNING, _label, "MoveWheel: f0 parse error, p0 skipped");
+            _telemetry->log(LogLevel::WARNING, _label, "MoveWheel: f0 parse error, recovery required");
         }
         return false;
     }

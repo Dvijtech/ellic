@@ -103,4 +103,5 @@ private:
     float _Vq;
     float _velEstimate;
     uint32_t _diagnosticsTimestampMs;
+    bool _moveRecoveryRequired;
 };
