@@ -197,8 +197,16 @@ void ODriveUART::updateConfigure() {
             }
             if (r == 1) {
                 float state = -1.0f;
-                if (sscanf(_rxBuffer, "%f", &state) == 1 && (int)state == 1) {
-                    _configState = ConfigState::Configuring;
+                if (sscanf(_rxBuffer, "%f", &state) == 1) {
+                    int s = (int)state;
+                    if (s == 1 || s == 8) {
+                        // IDLE (1) или уже CLOSED_LOOP_CONTROL (8) — оба случая
+                        // ведут в Configuring; sendConfigCommands() выполнится
+                        // в обоих случаях, см. раздел 10.2 спецификации.
+                        _configState = ConfigState::Configuring;
+                    } else {
+                        _configState = ConfigState::NotStarted;
+                    }
                 } else {
                     _configState = ConfigState::NotStarted;
                 }
@@ -207,7 +215,6 @@ void ODriveUART::updateConfigure() {
             }
             break;
         }
-
         case ConfigState::Configuring:
             sendConfigCommands();
             _confirmRequestSent = false;
