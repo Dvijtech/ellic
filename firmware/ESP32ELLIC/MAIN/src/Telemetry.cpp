@@ -1,35 +1,49 @@
 #include "Telemetry.h"
+#include "Encoder.h"
+#include "MotionController.h"
+#include "ODriveUART.h"
+#include <string.h>
+#include <stdio.h>
 
-Telemetry::Telemetry(Encoder &encoder, MotionController &motion, ODriveUART &left, ODriveUART &right)
-: _encoder(encoder), _motion(motion), _left(left), _right(right),
-  _lastCollectMs(0), _lastPrintMs(0), _minLevel(LogLevel::INFO),
-  _logHead(0), _logCount(0)
-{
-    _sample.encoder = {0, 0, 0};
-    _sample.motion.valDelta = 0;
-    _sample.motion.leftWheelDelta = 0;
-    _sample.motion.rightWheelDelta = 0;
-    _sample.motion.mode = MotionSnapshot::Mode::CALM;
-    _sample.motion.leftBrake = false;
-    _sample.motion.rightBrake = false;
-    _sample.motion.inTurnZone = false;
+Telemetry::Telemetry(Encoder* encoder, MotionController* motion,
+                      ODriveUART* left, ODriveUART* right)
+    : _encoder(encoder),
+      _motion(motion),
+      _left(left),
+      _right(right),
+      _lastCollectMs(0),
+      _lastPrintMs(0),
+      _minLevel(LogLevel::INFO),
+      _logWriteIndex(0),
+      _logCount(0) {
+    memset(&_sample, 0, sizeof(_sample));
 }
 
-void Telemetry::begin() {
+void Telemetry::begin(LogLevel minLevel) {
+    _minLevel = minLevel;
     _lastCollectMs = millis();
     _lastPrintMs = millis();
-    collect();
+    _logCount = 0;
 }
 
 void Telemetry::collect() {
-    _sample.encoder = _encoder.getSnapshot();
-    _sample.motion  = _motion.getSnapshot();
-    _sample.left    = _left.getSnapshot();
-    _sample.right   = _right.getSnapshot();
+    _sample.encoder = _encoder->getSnapshot();
+    _sample.motion  = _motion->getSnapshot();
+    _sample.left    = _left->getSnapshot();
+    _sample.right   = _right->getSnapshot();
 }
 
-const char* Telemetry::levelToStr(LogLevel level) {
-    switch (level) {
+static const char* modeToStr(MotionMode m) {
+    switch (m) {
+        case MotionMode::NORMAL: return "NORMAL";
+        case MotionMode::CALM:   return "CALM";
+        case MotionMode::TURN:   return "TURN";
+    }
+    return "?";
+}
+
+static const char* levelToStr(LogLevel l) {
+    switch (l) {
         case LogLevel::INFO:     return "INFO";
         case LogLevel::WARNING:  return "WARNING";
         case LogLevel::ERROR:    return "ERROR";
@@ -38,112 +52,85 @@ const char* Telemetry::levelToStr(LogLevel level) {
     return "?";
 }
 
-void Telemetry::printImmediate(LogLevel level, const char* module, const char* msg) {
-    Serial.print('[');
-    Serial.print(levelToStr(level));
-    Serial.print("] ");
-    Serial.print(module);
-    Serial.print(": ");
-    Serial.println(msg);
+static void printOdrive(const char* name, const OdriveSnapshot &s) {
+    Serial.printf("ODRIVE %s: online=%d state=%d axis_err=%d motor_err=%d ctrl_err=%d "
+                  "Iq=%.3f Vq=%.3f vel=%.3f tx=%lu rx=%lu rx_fail=%lu diag_ts=%lu\n",
+                  name, s.online ? 1 : 0, s.axisState, s.axisError, s.motorError,
+                  s.controllerError, s.Iq, s.Vq, s.velEstimate,
+                  (unsigned long)s.txCount, (unsigned long)s.rxCount,
+                  (unsigned long)s.rxFailCount, (unsigned long)s.diagnosticsTimestampMs);
 }
 
-void Telemetry::log(LogLevel level, const char* module, const char* msg) {
-    if ((uint8_t)level < (uint8_t)_minLevel) return;
+void Telemetry::printSample() const {
+    const EncoderSnapshot &enc = _sample.encoder;
+    const MotionSnapshot &mo = _sample.motion;
 
-    if (level == LogLevel::ERROR || level == LogLevel::CRITICAL) {
-        printImmediate(level, module, msg);
-        return;
-    }
-
-    LogEntry &e = _logBuffer[_logHead];
-    e.level = level;
-    strncpy(e.module, module, sizeof(e.module) - 1);
-    e.module[sizeof(e.module) - 1] = 0;
-    strncpy(e.msg, msg, sizeof(e.msg) - 1);
-    e.msg[sizeof(e.msg) - 1] = 0;
-
-    _logHead = (_logHead + 1) % LOG_BUFFER_SIZE;
-    if (_logCount < LOG_BUFFER_SIZE) _logCount++;
-}
-
-void Telemetry::printOdrive(const char* label, const OdriveSnapshot &s) {
-    Serial.print("ODRIVE ");
-    Serial.print(label);
-    Serial.print(": online=");
-    Serial.print(s.online ? "1" : "0");
-    Serial.print(" state=");
-    Serial.print(s.axisState);
-    Serial.print(" axis_error=");
-    Serial.print(s.axisError);
-    Serial.print(" motor_error=");
-    Serial.print(s.motorError);
-    Serial.print(" controller_error=");
-    Serial.print(s.controllerError);
-    Serial.print(" tx=");
-    Serial.print(s.txCount);
-    Serial.print(" rx=");
-    Serial.print(s.rxCount);
-    Serial.print(" rx_fail=");
-    Serial.println(s.rxFailCount);
-}
-
-void Telemetry::printScheduled() {
-    Serial.print("ENC raw=");
-    Serial.print(_sample.encoder.rawAngle, 2);
-    Serial.print(" cont=");
-    Serial.print(_sample.encoder.continuousAngle, 2);
-    Serial.print(" delta=");
-    Serial.println(_sample.encoder.lastDelta, 3);
-
-    Serial.print("BRAKE left=");
-    Serial.print(_sample.motion.leftBrake ? "1" : "0");
-    Serial.print(" right=");
-    Serial.print(_sample.motion.rightBrake ? "1" : "0");
-    Serial.print(" both=");
-    Serial.println((_sample.motion.leftBrake && _sample.motion.rightBrake) ? "1" : "0");
-
-    Serial.print("TURN zone=");
-    Serial.println(_sample.motion.inTurnZone ? "1" : "0");
-
-    Serial.print("MOTION mode=");
-    switch (_sample.motion.mode) {
-        case MotionSnapshot::Mode::NORMAL: Serial.println("NORMAL"); break;
-        case MotionSnapshot::Mode::CALM:   Serial.println("CALM");   break;
-        case MotionSnapshot::Mode::TURN:   Serial.println("TURN");  break;
-    }
-
-    Serial.print("WHEEL delta left=");
-    Serial.print(_sample.motion.leftWheelDelta, 4);
-    Serial.print(" right=");
-    Serial.println(_sample.motion.rightWheelDelta, 4);
+    Serial.printf("ENC raw=%.2f cont=%.2f delta=%.3f\n",
+                  enc.rawAngle, enc.continuousAngle, enc.lastDelta);
+    Serial.printf("BRAKE left=%d right=%d both=%d TURN zone=%d\n",
+                  mo.leftBrake ? 1 : 0, mo.rightBrake ? 1 : 0,
+                  (mo.leftBrake && mo.rightBrake) ? 1 : 0, mo.inTurnZone ? 1 : 0);
+    Serial.printf("MOTION mode=%s valDelta=%.4f\n", modeToStr(mo.mode), mo.valDelta);
+    Serial.printf("WHEEL delta left=%.4f right=%.4f\n",
+                  mo.leftWheelDelta, mo.rightWheelDelta);
 
     printOdrive("LEFT", _sample.left);
     printOdrive("RIGHT", _sample.right);
+}
 
-    uint8_t start = (_logHead + LOG_BUFFER_SIZE - _logCount) % LOG_BUFFER_SIZE;
-    for (uint8_t i = 0; i < _logCount; i++) {
-        LogEntry &e = _logBuffer[(start + i) % LOG_BUFFER_SIZE];
-        Serial.print('[');
-        Serial.print(levelToStr(e.level));
-        Serial.print("] ");
-        Serial.print(e.module);
-        Serial.print(": ");
-        Serial.println(e.msg);
+void Telemetry::printLogBuffer() {
+    // Печатаем накопленные записи в хронологическом порядке.
+    int start = (_logWriteIndex - _logCount + LOG_BUFFER_SIZE) % LOG_BUFFER_SIZE;
+    for (int i = 0; i < _logCount; i++) {
+        int idx = (start + i) % LOG_BUFFER_SIZE;
+        const LogEntry &e = _logBuffer[idx];
+        Serial.printf("[%s] %s: %s\n", levelToStr(e.level), e.module, e.msg);
     }
     _logCount = 0;
-    _logHead = 0;
+}
+
+void Telemetry::printScheduled() {
+    printSample();
+    printLogBuffer();
 }
 
 void Telemetry::update() {
     uint32_t now = millis();
 
-    if (now - _lastCollectMs >= COLLECT_PERIOD_MS) {
+    if (now - _lastCollectMs >= TELEMETRY_PERIOD_MS) {
         _lastCollectMs = now;
         collect();
     }
 
-    if (now - _lastPrintMs >= PRINT_PERIOD_MS) {
+    if (now - _lastPrintMs >= TELEMETRY_PRINT_PERIOD_MS) {
         _lastPrintMs = now;
         printScheduled();
     }
+}
+
+void Telemetry::log(LogLevel level, const char* module, const char* msg) {
+    if (level < _minLevel) {
+        return;
+    }
+
+    if (level == LogLevel::ERROR || level == LogLevel::CRITICAL) {
+        // Раздел 12.2: печатаются немедленно, синхронно, минуя расписание.
+        Serial.printf("[%s] %s: %s\n", levelToStr(level), module, msg);
+        return;
+    }
+
+    // INFO / WARNING - в кольцевой буфер до ближайшего printScheduled().
+    int idx = _logWriteIndex;
+    _logBuffer[idx].level = level;
+    strncpy(_logBuffer[idx].module, module, sizeof(_logBuffer[idx].module) - 1);
+    _logBuffer[idx].module[sizeof(_logBuffer[idx].module) - 1] = '\0';
+    strncpy(_logBuffer[idx].msg, msg, sizeof(_logBuffer[idx].msg) - 1);
+    _logBuffer[idx].msg[sizeof(_logBuffer[idx].msg) - 1] = '\0';
+
+    _logWriteIndex = (_logWriteIndex + 1) % LOG_BUFFER_SIZE;
+    if (_logCount < LOG_BUFFER_SIZE) {
+        _logCount++;
+    }
+    // если между двумя printScheduled() записей больше, чем LOG_BUFFER_SIZE,
+    // самые старые из них молча вытесняются более новыми (фикс. размер буфера).
 }

@@ -1,51 +1,46 @@
-#ifndef ODRIVE_UART_H
-#define ODRIVE_UART_H
-
+#pragma once
 #include <Arduino.h>
+#include "Config.h"
 
 class Telemetry;
 
-struct OdriveSnapshot {
-    bool online;
-    int axisState;
-    int axisError;
-    int motorError;
-    int controllerError;
-    float Iq;
-    float Vq;
-    float velEstimate;
-    uint32_t txCount;
-    uint32_t rxCount;
-    uint32_t rxFailCount;
-    uint32_t diagnosticsTimestampMs;
-};
-
+// ODriveUART: единственный модуль, обращающийся к UART одного ODrive.
+// Содержит:
+//  - автомат автоконфигурации (раздел 10.2),
+//  - фоновую диагностику по кругу из 7 параметров (раздел 12.1),
+//  - выполнение MoveWheel (f0 + p0, раздел 9 / 14.2.1),
+//  - счётчики и online/failStreak (раздел 13).
+//
+// Приоритет задач (раздел 14.2.3) реализован не как явная FIFO-очередь,
+// а через порядок вызовов в main.cpp (см. отчёт после кода):
+//   1. moveWheel() вызывается напрямую из main.cpp раз в CONTROL_PERIOD_MS
+//      и имеет право "достроить" ранее начатый (config/diag) обмен перед
+//      отправкой собственного f0, но не начинает НОВЫЙ фоновый обмен.
+//   2. update() (конфигурация, затем диагностика) вызывается в каждом loop().
 class ODriveUART {
 public:
-    static const uint32_t RESPONSE_TIMEOUT_MS   = 50;
-    static const uint8_t  ALIVE_FAIL_THRESHOLD  = 5;
-
-    ODriveUART(HardwareSerial &serial, int rxPin, int txPin, uint32_t baud, const char* label);
+    ODriveUART(HardwareSerial &serial, uint8_t rxPin, uint8_t txPin, const char* label);
 
     void setTelemetry(Telemetry* telemetry);
 
+    // Открывает UART. Явный configure() из setup() ОТКЛЮЧЁН (раздел 10.1) -
+    // соответствующего публичного метода в этом классе намеренно нет.
     void begin();
 
-    // Диспетчер очереди UART: MoveWheel / config-запросы / фоновая диагностика.
-    // Вызывается на каждом проходе loop().
+    // Вызывать в каждом проходе loop(): продвигает автомат конфигурации,
+    // затем (если конфигурация завершена и UART свободен) - фоновую
+    // диагностику (раздел 14.2.3: приоритет 2, затем 3).
     void update();
 
-    // Конечный автомат автоматической конфигурации (раздел 10.2).
-    // Вызывается на каждом проходе loop().
-    void updateConfigure();
-
-    // Вызывается MotionController раз в CONTROL_PERIOD_MS.
-    void requestMove(float wheelDelta);
+    // MoveWheel: f 0 -> currentPosition -> p 0 (currentPosition + delta).
+    // Возвращает false, если f0 не получил ответа - в этом случае p0
+    // для этого колеса в этом цикле не отправляется (раздел 9, 13).
+    bool moveWheel(float delta);
 
     OdriveSnapshot getSnapshot() const;
 
 private:
-    enum class ConfigStage {
+    enum class ConfigState {
         NotStarted,
         WaitingIdle,
         Configuring,
@@ -53,75 +48,59 @@ private:
         Done
     };
 
-    enum class Purpose {
-        NONE,
-        MOVE_READ_POS,
-        CONFIG_CHECK_IDLE,
-        CONFIG_CHECK_CLOSEDLOOP,
-        DIAG_IQ,
-        DIAG_VQ,
-        DIAG_VEL,
-        DIAG_STATE,
-        DIAG_AXIS_ERR,
-        DIAG_MOTOR_ERR,
-        DIAG_CTRL_ERR
-    };
+    // ---- автомат конфигурации (раздел 10.2) ----
+    void updateConfigure();
+    void sendConfigCommands();
+
+    // ---- фоновая диагностика (раздел 12.1 / 12.3) ----
+    void updateDiagnostics();
+    void applyDiagResult(int index, const char* buf);
+
+    // ---- низкоуровневый асинхронный обмен "один запрос в полёте" (14.2.2) ----
+    void sendRequestAsync(const char* cmd);
+    // 0 = ещё ждём, 1 = получена строка ответа (в _rxBuffer), -1 = ошибка/таймаут
+    int  pollResponse();
+    // Блокирующее ожидание уже отправленного запроса (используется, когда
+    // moveWheel() должен дождаться завершения чужого обмена - раздел 14.2.3)
+    bool waitForResponse(char* outBuf, size_t bufSize);
+    void flushRx();
+    void onSuccess();
+    void onFailure();
 
     HardwareSerial &_serial;
-    int _rxPin;
-    int _txPin;
-    uint32_t _baud;
-    char _label[8];
+    uint8_t _rxPin;
+    uint8_t _txPin;
+    const char* _label;
     Telemetry* _telemetry;
 
-    // --- низкоуровневый обмен: не более одного запроса "в полёте" ---
-    bool _busy;
-    Purpose _purpose;
-    uint32_t _requestStartMs;
-    String _rxBuffer;
+    // конфигурация
+    ConfigState _configState;
+    bool _confirmRequestSent;
 
-    // --- MoveWheel ---
-    bool _moveWheelPending;
-    float _queuedWheelDelta;   // ждёт диспетчеризации
-    float _activeWheelDelta;   // используется в момент разбора ответа f 0
+    // асинхронный обмен
+    bool _requestPending;
+    uint32_t _requestSentMs;
+    char _rxBuffer[64];
+    size_t _rxBufferLen;
 
-    // --- конфигурация (раздел 10.2) ---
-    ConfigStage _configStage;
-    bool _configRequestPending;
-    Purpose _configPendingPurpose;
-    bool _configAwaitingResponse;
-    bool _configResponseReady;
-    bool _configResponseOk;
-    float _configResponseValue;
+    // диагностика
+    int _diagIndex;
+    uint32_t _lastDiagRequestMs;
 
-    // --- фоновая диагностика ---
-    uint8_t _diagIndex; // 0..6, round-robin
-    float _Iq;
-    float _Vq;
-    float _velEstimate;
-    int _axisState;
-    int _axisError;
-    int _motorError;
-    int _controllerError;
-    uint32_t _diagnosticsTimestampMs;
-
-    // --- диагностика связи ---
+    // связь / статистика (раздел 13)
+    int _failStreak;
     bool _online;
-    uint8_t _failStreak;
     uint32_t _txCount;
     uint32_t _rxCount;
     uint32_t _rxFailCount;
 
-    void sendRequest(const char* cmd, Purpose purpose);
-    void handleResponseLine(const String &line);
-    void handleTimeout();
-    void dispatchNext();
-    void sendConfigCommands(); // блокирующий вызов
-    void onExchangeSuccess();
-    void onExchangeFailure();
-
-    static bool parseOneFloat(const String &line, float &out);
-    static bool parseTwoFloats(const String &line, float &a, float &b);
+    // диагностический кэш (раздел 12.3)
+    int _axisState;
+    int _axisError;
+    int _motorError;
+    int _controllerError;
+    float _Iq;
+    float _Vq;
+    float _velEstimate;
+    uint32_t _diagnosticsTimestampMs;
 };
-
-#endif

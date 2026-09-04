@@ -1,21 +1,35 @@
 #include "ODriveUART.h"
 #include "Telemetry.h"
-#include <math.h>
+#include <string.h>
+#include <stdio.h>
 
-ODriveUART::ODriveUART(HardwareSerial &serial, int rxPin, int txPin, uint32_t baud, const char* label)
-: _serial(serial), _rxPin(rxPin), _txPin(txPin), _baud(baud), _telemetry(nullptr),
-  _busy(false), _purpose(Purpose::NONE), _requestStartMs(0), _rxBuffer(""),
-  _moveWheelPending(false), _queuedWheelDelta(0.0f), _activeWheelDelta(0.0f),
-  _configStage(ConfigStage::NotStarted), _configRequestPending(false),
-  _configPendingPurpose(Purpose::NONE), _configAwaitingResponse(false),
-  _configResponseReady(false), _configResponseOk(false), _configResponseValue(0.0f),
-  _diagIndex(0), _Iq(0.0f), _Vq(0.0f), _velEstimate(0.0f),
-  _axisState(0), _axisError(0), _motorError(0), _controllerError(0),
-  _diagnosticsTimestampMs(0),
-  _online(false), _failStreak(0), _txCount(0), _rxCount(0), _rxFailCount(0)
-{
-    strncpy(_label, label, sizeof(_label) - 1);
-    _label[sizeof(_label) - 1] = 0;
+ODriveUART::ODriveUART(HardwareSerial &serial, uint8_t rxPin, uint8_t txPin, const char* label)
+    : _serial(serial),
+      _rxPin(rxPin),
+      _txPin(txPin),
+      _label(label),
+      _telemetry(nullptr),
+      _configState(ConfigState::NotStarted),
+      _confirmRequestSent(false),
+      _requestPending(false),
+      _requestSentMs(0),
+      _rxBufferLen(0),
+      _diagIndex(0),
+      _lastDiagRequestMs(0),
+      _failStreak(0),
+      _online(false),
+      _txCount(0),
+      _rxCount(0),
+      _rxFailCount(0),
+      _axisState(0),
+      _axisError(0),
+      _motorError(0),
+      _controllerError(0),
+      _Iq(0.0f),
+      _Vq(0.0f),
+      _velEstimate(0.0f),
+      _diagnosticsTimestampMs(0) {
+    _rxBuffer[0] = '\0';
 }
 
 void ODriveUART::setTelemetry(Telemetry* telemetry) {
@@ -23,306 +37,285 @@ void ODriveUART::setTelemetry(Telemetry* telemetry) {
 }
 
 void ODriveUART::begin() {
-    _serial.begin(_baud, SERIAL_8N1, _rxPin, _txPin);
+    _serial.begin(ODRIVE_UART_BAUD, SERIAL_8N1, _rxPin, _txPin);
 }
 
-// ---------- парсинг ----------
+// =======================================================================
+// Низкоуровневый асинхронный обмен (раздел 13.1, 14.2.2)
+// =======================================================================
 
-bool ODriveUART::parseOneFloat(const String &line, float &out) {
-    String t = line;
-    t.trim();
-    if (t.length() == 0) return false;
-    char* endPtr;
-    float v = strtod(t.c_str(), &endPtr);
-    if (endPtr == t.c_str()) return false;
-    out = v;
-    return true;
+void ODriveUART::flushRx() {
+    _rxBufferLen = 0;
+    _rxBuffer[0] = '\0';
+    while (_serial.available()) {
+        _serial.read();
+    }
 }
 
-bool ODriveUART::parseTwoFloats(const String &line, float &a, float &b) {
-    String t = line;
-    t.trim();
-    int sp = t.indexOf(' ');
-    if (sp < 0) return false;
-    String s1 = t.substring(0, sp);
-    String s2 = t.substring(sp + 1);
-    s2.trim();
-    char* e1;
-    char* e2;
-    float v1 = strtod(s1.c_str(), &e1);
-    float v2 = strtod(s2.c_str(), &e2);
-    if (e1 == s1.c_str() || e2 == s2.c_str()) return false;
-    a = v1;
-    b = v2;
-    return true;
-}
-
-// ---------- низкоуровневый обмен ----------
-
-void ODriveUART::sendRequest(const char* cmd, Purpose purpose) {
-    _serial.print(cmd);
-    _serial.print("\n");
-    _txCount++;
-    _busy = true;
-    _purpose = purpose;
-    _requestStartMs = millis();
-    _rxBuffer = "";
-}
-
-void ODriveUART::onExchangeSuccess() {
+void ODriveUART::onSuccess() {
     _rxCount++;
-    bool wasOffline = !_online;
     _failStreak = 0;
     _online = true;
-    if (wasOffline && _telemetry) {
-        _telemetry->log(LogLevel::INFO, _label, "ODrive online (connection restored)");
-    }
 }
 
-void ODriveUART::onExchangeFailure() {
+void ODriveUART::onFailure() {
     _rxFailCount++;
-    if (_failStreak < 255) _failStreak++;
-    if (_failStreak >= ALIVE_FAIL_THRESHOLD && _online) {
+    _failStreak++;
+    if (_failStreak >= ALIVE_FAIL_THRESHOLD) {
         _online = false;
-        if (_telemetry) {
-            _telemetry->log(LogLevel::WARNING, _label, "ODrive offline (failStreak >= threshold)");
-        }
     }
+    // Раздел 13.1: очистка программного и физического RX-буфера после ошибки.
+    flushRx();
 }
 
-void ODriveUART::handleResponseLine(const String &line) {
-    switch (_purpose) {
-        case Purpose::MOVE_READ_POS: {
-            float pos, vel;
-            bool ok = parseTwoFloats(line, pos, vel);
-            if (ok) {
-                onExchangeSuccess();
-                float newPos = pos + _activeWheelDelta;
-                char buf[32];
-                snprintf(buf, sizeof(buf), "p 0 %.4f\n", newPos);
-                _serial.print(buf);
-                _txCount++;
-            } else {
-                onExchangeFailure();
-                if (_telemetry) {
-                    _telemetry->log(LogLevel::WARNING, _label, "f0 read failed, p0 not sent this cycle");
-                }
-            }
-            break;
-        }
-        case Purpose::CONFIG_CHECK_IDLE:
-        case Purpose::CONFIG_CHECK_CLOSEDLOOP: {
-            float val;
-            bool ok = parseOneFloat(line, val);
-            if (ok) onExchangeSuccess(); else onExchangeFailure();
-            _configResponseOk = ok;
-            _configResponseValue = ok ? val : 0.0f;
-            _configResponseReady = true;
-            _configAwaitingResponse = false;
-            break;
-        }
-        case Purpose::DIAG_IQ: {
-            float v;
-            if (parseOneFloat(line, v)) { _Iq = v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 1;
-            break;
-        }
-        case Purpose::DIAG_VQ: {
-            float v;
-            if (parseOneFloat(line, v)) { _Vq = v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 2;
-            break;
-        }
-        case Purpose::DIAG_VEL: {
-            float v;
-            if (parseOneFloat(line, v)) { _velEstimate = v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 3;
-            break;
-        }
-        case Purpose::DIAG_STATE: {
-            float v;
-            if (parseOneFloat(line, v)) { _axisState = (int)v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 4;
-            break;
-        }
-        case Purpose::DIAG_AXIS_ERR: {
-            float v;
-            if (parseOneFloat(line, v)) { _axisError = (int)v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 5;
-            break;
-        }
-        case Purpose::DIAG_MOTOR_ERR: {
-            float v;
-            if (parseOneFloat(line, v)) { _motorError = (int)v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 6;
-            break;
-        }
-        case Purpose::DIAG_CTRL_ERR: {
-            float v;
-            if (parseOneFloat(line, v)) { _controllerError = (int)v; onExchangeSuccess(); _diagnosticsTimestampMs = millis(); }
-            else onExchangeFailure();
-            _diagIndex = 0;
-            break;
-        }
-        case Purpose::NONE:
-        default:
-            break;
-    }
+void ODriveUART::sendRequestAsync(const char* cmd) {
+    // Раздел 14.2.2: перед отправкой UART должен быть синхронизирован.
+    flushRx();
+    _serial.print(cmd);
+    _txCount++;
+    _requestPending = true;
+    _requestSentMs = millis();
+    _rxBufferLen = 0;
+    _rxBuffer[0] = '\0';
 }
 
-void ODriveUART::handleTimeout() {
-    switch (_purpose) {
-        case Purpose::MOVE_READ_POS:
-            onExchangeFailure();
-            if (_telemetry) {
-                _telemetry->log(LogLevel::WARNING, _label, "f0 timeout, p0 not sent this cycle");
-            }
-            break;
-        case Purpose::CONFIG_CHECK_IDLE:
-        case Purpose::CONFIG_CHECK_CLOSEDLOOP:
-            onExchangeFailure();
-            _configResponseOk = false;
-            _configResponseValue = 0.0f;
-            _configResponseReady = true;
-            _configAwaitingResponse = false;
-            break;
-        case Purpose::DIAG_IQ:        onExchangeFailure(); _diagIndex = 1; break;
-        case Purpose::DIAG_VQ:        onExchangeFailure(); _diagIndex = 2; break;
-        case Purpose::DIAG_VEL:       onExchangeFailure(); _diagIndex = 3; break;
-        case Purpose::DIAG_STATE:     onExchangeFailure(); _diagIndex = 4; break;
-        case Purpose::DIAG_AXIS_ERR:  onExchangeFailure(); _diagIndex = 5; break;
-        case Purpose::DIAG_MOTOR_ERR: onExchangeFailure(); _diagIndex = 6; break;
-        case Purpose::DIAG_CTRL_ERR:  onExchangeFailure(); _diagIndex = 0; break;
-        case Purpose::NONE:
-        default:
-            break;
+int ODriveUART::pollResponse() {
+    if (!_requestPending) {
+        return -1;
     }
-}
 
-void ODriveUART::dispatchNext() {
-    // 1) MoveWheel — наивысший приоритет
-    if (_moveWheelPending) {
-        _moveWheelPending = false;
-        _activeWheelDelta = _queuedWheelDelta;
-        sendRequest("f 0", Purpose::MOVE_READ_POS);
-        return;
-    }
-    // 2) запросы конечного автомата конфигурации
-    if (_configRequestPending) {
-        _configRequestPending = false;
-        _configAwaitingResponse = true;
-        sendRequest("r axis0.current_state", _configPendingPurpose);
-        return;
-    }
-    // 3) фоновая диагностика: current -> voltage -> velocity -> state -> errors -> по кругу
-    switch (_diagIndex) {
-        case 0: sendRequest("r axis0.motor.current_control.Iq_measured", Purpose::DIAG_IQ); break;
-        case 1: sendRequest("r axis0.motor.current_control.Vq_setpoint", Purpose::DIAG_VQ); break;
-        case 2: sendRequest("r axis0.encoder.vel_estimate", Purpose::DIAG_VEL); break;
-        case 3: sendRequest("r axis0.current_state", Purpose::DIAG_STATE); break;
-        case 4: sendRequest("r axis0.error", Purpose::DIAG_AXIS_ERR); break;
-        case 5: sendRequest("r axis0.motor.error", Purpose::DIAG_MOTOR_ERR); break;
-        default: sendRequest("r axis0.controller.error", Purpose::DIAG_CTRL_ERR); break;
-    }
-}
-
-void ODriveUART::update() {
-    if (_busy) {
-        while (_serial.available()) {
-            char c = _serial.read();
-            if (c == '\n') {
-                handleResponseLine(_rxBuffer);
-                _rxBuffer = "";
-                _busy = false;
-                break;
-            } else if (c != '\r') {
-                _rxBuffer += c;
+    while (_serial.available()) {
+        char c = (char)_serial.read();
+        if (c == '\n') {
+            _requestPending = false;
+            onSuccess();
+            return 1;
+        } else if (c != '\r') {
+            if (_rxBufferLen < sizeof(_rxBuffer) - 1) {
+                _rxBuffer[_rxBufferLen++] = c;
+                _rxBuffer[_rxBufferLen] = '\0';
             }
         }
-        if (_busy && (millis() - _requestStartMs >= RESPONSE_TIMEOUT_MS)) {
-            handleTimeout();
-            _busy = false;
-            _rxBuffer = "";
+    }
+
+    if (millis() - _requestSentMs >= RESPONSE_TIMEOUT_MS) {
+        _requestPending = false;
+        onFailure();
+        return -1;
+    }
+
+    return 0;
+}
+
+bool ODriveUART::waitForResponse(char* outBuf, size_t bufSize) {
+    while (true) {
+        int r = pollResponse();
+        if (r == 1) {
+            strncpy(outBuf, _rxBuffer, bufSize - 1);
+            outBuf[bufSize - 1] = '\0';
+            return true;
         }
-    }
-
-    if (!_busy) {
-        dispatchNext();
+        if (r == -1) {
+            return false;
+        }
+        // r == 0: продолжаем ждать (без задержки - таймаут проверяется в pollResponse)
     }
 }
 
-// ---------- requestMove ----------
+// =======================================================================
+// MoveWheel (раздел 9, 14.2.1)
+// =======================================================================
 
-void ODriveUART::requestMove(float wheelDelta) {
-    _moveWheelPending = true;
-    _queuedWheelDelta = wheelDelta;
+bool ODriveUART::moveWheel(float delta) {
+    // Раздел 14.2.3: если сейчас идёт чужой (диагностика/конфигурация) обмен,
+    // MoveWheel дожидается его завершения (успех или таймаут RESPONSE_TIMEOUT_MS),
+    // но не прерывает и не отменяет его - только после этого начинает f0.
+    if (_requestPending) {
+        char discard[64];
+        waitForResponse(discard, sizeof(discard));
+    }
+
+    // f 0 -> currentPosition
+    sendRequestAsync("f 0\n");
+    char buf[64];
+    if (!waitForResponse(buf, sizeof(buf))) {
+        if (_telemetry != nullptr) {
+            _telemetry->log(LogLevel::WARNING, _label, "MoveWheel: f0 timeout, p0 skipped");
+        }
+        return false;
+    }
+
+    float currentPosition, currentVelocity;
+    if (sscanf(buf, "%f %f", &currentPosition, &currentVelocity) != 2) {
+        if (_telemetry != nullptr) {
+            _telemetry->log(LogLevel::WARNING, _label, "MoveWheel: f0 parse error, p0 skipped");
+        }
+        return false;
+    }
+
+    float newPosition = currentPosition + delta;
+    char cmd[40];
+    snprintf(cmd, sizeof(cmd), "p 0 %.4f\n", newPosition);
+    _serial.print(cmd);
+    _txCount++;
+    return true;
 }
 
-// ---------- конфигурация (раздел 10.2) ----------
+// =======================================================================
+// Автоконфигурация (раздел 10.2)
+// =======================================================================
 
 void ODriveUART::sendConfigCommands() {
-    _serial.print("w axis0.controller.config.control_mode 3\n"); _txCount++; delay(20);
-    _serial.print("w axis0.controller.config.input_mode 2\n");   _txCount++; delay(20);
-    _serial.print("w axis0.trap_traj.config.vel_limit 2.0\n");   _txCount++; delay(20);
-    _serial.print("w axis0.trap_traj.config.accel_limit 10.0\n"); _txCount++; delay(20);
-    _serial.print("w axis0.trap_traj.config.decel_limit 10.0\n"); _txCount++; delay(20);
-    _serial.print("w axis0.requested_state 8\n");                _txCount++; delay(100);
+    static const char* cmds[] = {
+        "w axis0.controller.config.control_mode 3\n",
+        "w axis0.controller.config.input_mode 1\n",
+        "w axis0.trap_traj.config.vel_limit 2.0\n",
+        "w axis0.trap_traj.config.accel_limit 10.0\n",
+        "w axis0.trap_traj.config.decel_limit 10.0\n",
+        "w axis0.requested_state 8\n"
+    };
+    const int n = sizeof(cmds) / sizeof(cmds[0]);
+    for (int i = 0; i < n; i++) {
+        _serial.print(cmds[i]);
+        _txCount++;
+        delay(20);
+    }
+    delay(100);
 }
 
 void ODriveUART::updateConfigure() {
-    switch (_configStage) {
-        case ConfigStage::NotStarted:
-            if (!_configRequestPending && !_configAwaitingResponse) {
-                _configPendingPurpose = Purpose::CONFIG_CHECK_IDLE;
-                _configRequestPending = true;
-                _configStage = ConfigStage::WaitingIdle;
-            }
+    switch (_configState) {
+        case ConfigState::NotStarted:
+            sendRequestAsync("r axis0.current_state\n");
+            _configState = ConfigState::WaitingIdle;
             break;
 
-        case ConfigStage::WaitingIdle:
-            if (_configResponseReady) {
-                _configResponseReady = false;
-                bool isIdle = _configResponseOk && (fabsf(_configResponseValue - 1.0f) < 0.5f);
-                if (isIdle) {
-                    _configStage = ConfigStage::Configuring;
-                    sendConfigCommands(); // блокирующий вызов, как определено спецификацией
-                    _configStage = ConfigStage::ConfirmingClosedLoop;
-                    _configPendingPurpose = Purpose::CONFIG_CHECK_CLOSEDLOOP;
-                    _configRequestPending = true;
+        case ConfigState::WaitingIdle: {
+            int r = pollResponse();
+            if (r == 0) {
+                return;
+            }
+            if (r == 1) {
+                float state = -1.0f;
+                if (sscanf(_rxBuffer, "%f", &state) == 1 && (int)state == 1) {
+                    _configState = ConfigState::Configuring;
                 } else {
-                    _configStage = ConfigStage::NotStarted;
+                    _configState = ConfigState::NotStarted;
                 }
+            } else {
+                _configState = ConfigState::NotStarted;
             }
             break;
+        }
 
-        case ConfigStage::Configuring:
-            // Стадия проходится синхронно внутри WaitingIdle, сюда управление не возвращается.
+        case ConfigState::Configuring:
+            sendConfigCommands();
+            _confirmRequestSent = false;
+            _configState = ConfigState::ConfirmingClosedLoop;
             break;
 
-        case ConfigStage::ConfirmingClosedLoop:
-            if (_configResponseReady) {
-                _configResponseReady = false;
-                bool isClosedLoop = _configResponseOk && (fabsf(_configResponseValue - 8.0f) < 0.5f);
-                if (isClosedLoop) {
-                    _configStage = ConfigStage::Done;
+        case ConfigState::ConfirmingClosedLoop: {
+            if (!_confirmRequestSent) {
+                sendRequestAsync("r axis0.current_state\n");
+                _confirmRequestSent = true;
+                return;
+            }
+            int r = pollResponse();
+            if (r == 0) {
+                return;
+            }
+            if (r == 1) {
+                float state = -1.0f;
+                if (sscanf(_rxBuffer, "%f", &state) == 1 && (int)state == 8) {
+                    _configState = ConfigState::Done;
+                    if (_telemetry != nullptr) {
+                        _telemetry->log(LogLevel::INFO, _label, "CLOSED_LOOP_CONTROL confirmed");
+                    }
                 } else {
-                    _configStage = ConfigStage::NotStarted;
+                    _configState = ConfigState::NotStarted;
                 }
+            } else {
+                _configState = ConfigState::NotStarted;
             }
             break;
+        }
 
-        case ConfigStage::Done:
+        case ConfigState::Done:
+            // конфигурация подтверждена, updateConfigure() больше ничего не делает
             break;
     }
 }
 
-// ---------- snapshot ----------
+// =======================================================================
+// Фоновая диагностика (раздел 12.1)
+// =======================================================================
+
+void ODriveUART::applyDiagResult(int index, const char* buf) {
+    float fval = 0.0f;
+    sscanf(buf, "%f", &fval);
+
+    switch (index) {
+        case 0: _Iq = fval; break;                    // Iq_measured
+        case 1: _Vq = fval; break;                    // Vq_setpoint
+        case 2: _velEstimate = fval; break;            // vel_estimate
+        case 3: _axisState = (int)fval; break;         // current_state
+        case 4: _axisError = (int)fval; break;         // axis0.error
+        case 5: _motorError = (int)fval; break;        // motor.error
+        case 6: _controllerError = (int)fval; break;   // controller.error
+        default: break;
+    }
+    _diagnosticsTimestampMs = millis();
+}
+
+void ODriveUART::updateDiagnostics() {
+    static const char* params[7] = {
+        "axis0.motor.current_control.Iq_measured",
+        "axis0.motor.current_control.Vq_setpoint",
+        "axis0.encoder.vel_estimate",
+        "axis0.current_state",
+        "axis0.error",
+        "axis0.motor.error",
+        "axis0.controller.error"
+    };
+
+    if (_requestPending) {
+        int r = pollResponse();
+        if (r == 0) {
+            return;
+        }
+        if (r == 1) {
+            applyDiagResult(_diagIndex, _rxBuffer);
+        }
+        // и при успехе, и при таймауте - переходим к следующему параметру
+        // по кругу (раздел 12.1)
+        _diagIndex = (_diagIndex + 1) % 7;
+        return;
+    }
+
+    if (millis() - _lastDiagRequestMs >= DIAG_PERIOD_MS) {
+        char cmd[64];
+        snprintf(cmd, sizeof(cmd), "r %s\n", params[_diagIndex]);
+        sendRequestAsync(cmd);
+        _lastDiagRequestMs = millis();
+    }
+}
+
+// =======================================================================
+// Диспетчер (раздел 14): вызывается раз в loop()
+// =======================================================================
+
+void ODriveUART::update() {
+    // Приоритет 1 (MoveWheel) обслуживается напрямую из main.cpp через
+    // moveWheel(), вне этого метода.
+    if (_configState != ConfigState::Done) {
+        // Приоритет 2: конфигурация имеет приоритет над диагностикой,
+        // пока не завершена.
+        updateConfigure();
+        return;
+    }
+    // Приоритет 3: фоновая диагностика.
+    updateDiagnostics();
+}
 
 OdriveSnapshot ODriveUART::getSnapshot() const {
     OdriveSnapshot s;

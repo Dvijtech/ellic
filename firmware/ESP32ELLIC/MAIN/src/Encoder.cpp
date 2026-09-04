@@ -3,82 +3,78 @@
 #include <Wire.h>
 
 Encoder::Encoder()
-: _telemetry(nullptr),
-  _rawAngle(0.0f),
-  _previousRawAngle(0.0f),
-  _continuousAngle(0.0f),
-  _lastDelta(0.0f),
-  _initialized(false)
-{
-}
+    : _telemetry(nullptr),
+      _initialized(false),
+      _previousRawAngle(0.0f),
+      _continuousAngle(0.0f),
+      _lastDelta(0.0f) {}
 
-void Encoder::setTelemetry(Telemetry* telemetry) {
+void Encoder::begin(Telemetry* telemetry) {
     _telemetry = telemetry;
+    _initialized = false;
+    _previousRawAngle = 0.0f;
+    _continuousAngle = 0.0f;
+    _lastDelta = 0.0f;
 }
 
-void Encoder::begin() {
-    // Wire.begin()/Wire.setClock() выполняются один раз в main.cpp::setup(),
-    // так как I2C-шина общая для системы; Encoder её не инициализирует.
-}
-
-bool Encoder::readRawAngleFromSensor(float &outAngleDeg) {
-    Wire.beginTransmission(AS5600_I2C_ADDRESS);
+// Чтение 12-битного RAW ANGLE регистра AS5600 (0x0C/0x0D) -> градусы 0..360.
+// Возвращает false, если Wire.requestFrom() вернул менее 2 байт (раздел 6.3).
+bool Encoder::readRawAngleDeg(float &outDeg) {
+    Wire.beginTransmission(AS5600_I2C_ADDR);
     Wire.write(AS5600_RAW_ANGLE_REG);
     if (Wire.endTransmission(false) != 0) {
         return false;
     }
 
-    uint8_t got = Wire.requestFrom((int)AS5600_I2C_ADDRESS, 2);
-    if (got < 2 || Wire.available() < 2) {
+    uint8_t received = Wire.requestFrom((int)AS5600_I2C_ADDR, (int)2);
+    if (received < 2) {
+        // Недостаточно байт - ошибка чтения (раздел 6.3)
         return false;
     }
 
-    uint16_t hi = Wire.read();
-    uint16_t lo = Wire.read();
-    uint16_t raw = ((hi << 8) | lo) & 0x0FFF; // 12 бит
+    uint8_t hi = Wire.read();
+    uint8_t lo = Wire.read();
+    uint16_t raw12 = ((uint16_t)(hi & 0x0F) << 8) | lo;
 
-    outAngleDeg = (raw * 360.0f) / 4096.0f;
+    outDeg = (raw12 * 360.0f) / 4096.0f;
     return true;
 }
 
 void Encoder::update() {
-    float newRaw;
-    bool ok = readRawAngleFromSensor(newRaw);
-
-    if (!ok) {
-        // 6.3: continuousAngle и previousRawAngle НЕ обновляются
-        if (_telemetry) {
-            _telemetry->log(LogLevel::WARNING, "Encoder", "AS5600 read error (I2C < 2 bytes)");
+    float raw;
+    if (!readRawAngleDeg(raw)) {
+        // Раздел 6.3: continuousAngle и previousRawAngle НЕ обновляются,
+        // функция(снапшот) продолжает отдавать последнее валидное значение.
+        if (_telemetry != nullptr) {
+            _telemetry->log(LogLevel::WARNING, "Encoder", "AS5600 read error (<2 bytes)");
         }
         return;
     }
 
     if (!_initialized) {
-        // Первый валидный отсчёт: только инициализация, без вычисления дельты
-        _previousRawAngle = newRaw;
-        _rawAngle = newRaw;
+        // Первый успешный запуск: фиксируем точку отсчёта, дельту не считаем.
+        _previousRawAngle = raw;
         _continuousAngle = 0.0f;
         _lastDelta = 0.0f;
         _initialized = true;
         return;
     }
 
-    float delta = newRaw - _previousRawAngle;
-    if (delta > 180.0f)  delta -= 360.0f;
-    if (delta < -180.0f) delta += 360.0f;
+    float delta = raw - _previousRawAngle;
+    if (delta > 180.0f) {
+        delta -= 360.0f;
+    } else if (delta < -180.0f) {
+        delta += 360.0f;
+    }
 
     _continuousAngle += delta;
-    _previousRawAngle = newRaw;
-    _rawAngle = newRaw;
     _lastDelta = delta;
+    _previousRawAngle = raw;
 }
-
-float Encoder::getRawAngle() const { return _rawAngle; }
-float Encoder::getContinuousAngle() const { return _continuousAngle; }
 
 EncoderSnapshot Encoder::getSnapshot() const {
     EncoderSnapshot s;
-    s.rawAngle = _rawAngle;
+    s.rawAngle = _previousRawAngle;
     s.continuousAngle = _continuousAngle;
     s.lastDelta = _lastDelta;
     return s;

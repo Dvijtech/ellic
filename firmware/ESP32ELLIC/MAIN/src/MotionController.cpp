@@ -1,97 +1,107 @@
 #include "MotionController.h"
-#include "ODriveUART.h"
-#include "Telemetry.h"
+#include <math.h>
 
-MotionController::MotionController(Encoder &encoder, ODriveUART &leftOdrive, ODriveUART &rightOdrive)
-: _encoder(encoder), _leftOdrive(leftOdrive), _rightOdrive(rightOdrive), _telemetry(nullptr),
-  _prevContinuousAngle(0.0f)
-{
-    _lastSnapshot.valDelta = 0.0f;
-    _lastSnapshot.leftWheelDelta = 0.0f;
-    _lastSnapshot.rightWheelDelta = 0.0f;
-    _lastSnapshot.mode = MotionSnapshot::Mode::CALM;
-    _lastSnapshot.leftBrake = false;
-    _lastSnapshot.rightBrake = false;
-    _lastSnapshot.inTurnZone = false;
-}
-
-void MotionController::setTelemetry(Telemetry* telemetry) {
-    _telemetry = telemetry;
-}
+MotionController::MotionController()
+    : _initialized(false),
+      _previousContinuousAngle(0.0f),
+      _valDelta(0.0f),
+      _leftWheelDelta(0.0f),
+      _rightWheelDelta(0.0f),
+      _leftBrake(false),
+      _rightBrake(false),
+      _inTurnZone(false),
+      _mode(MotionMode::CALM) {}
 
 void MotionController::begin() {
-    pinMode(LEFT_BRAKE_PIN, INPUT_PULLUP);
-    pinMode(RIGHT_BRAKE_PIN, INPUT_PULLUP);
-    _prevContinuousAngle = _encoder.getContinuousAngle();
+    _initialized = false;
+    _previousContinuousAngle = 0.0f;
+    _valDelta = 0.0f;
+    _leftWheelDelta = 0.0f;
+    _rightWheelDelta = 0.0f;
+    _leftBrake = false;
+    _rightBrake = false;
+    _inTurnZone = false;
+    _mode = MotionMode::CALM;
 }
 
-bool MotionController::isInTurnZone(float rawAngleDeg) const {
-    float a = rawAngleDeg;
-    while (a < 0.0f)    a += 360.0f;
-    while (a >= 360.0f) a -= 360.0f;
+// Раздел 8.1: зоны 170..190 и 350..360/0..10 при TURN_ZONE_DEG = 10.0
+bool MotionController::isInTurnZone(float angleDeg) {
+    float a = fmodf(angleDeg, 360.0f);
+    if (a < 0.0f) a += 360.0f;
 
-    bool nearZero = (a >= (360.0f - TURN_ZONE_DEG)) || (a <= TURN_ZONE_DEG);
-    bool near180  = (a >= (180.0f - TURN_ZONE_DEG)) && (a <= (180.0f + TURN_ZONE_DEG));
-    return nearZero || near180;
+    bool zoneAt180 = (a >= (180.0f - TURN_ZONE_DEG)) && (a <= (180.0f + TURN_ZONE_DEG));
+    bool zoneAt0   = (a >= (360.0f - TURN_ZONE_DEG)) || (a <= TURN_ZONE_DEG);
+
+    return zoneAt180 || zoneAt0;
 }
 
-void MotionController::update() {
-    float nowAngle = _encoder.getContinuousAngle();
-    float valDelta = nowAngle - _prevContinuousAngle;
-    _prevContinuousAngle = nowAngle;
+void MotionController::update(float rawAngleDeg, float continuousAngleDeg,
+                               bool leftBrake, bool rightBrake) {
+    _leftBrake = leftBrake;
+    _rightBrake = rightBrake;
 
-    bool leftBrake  = (digitalRead(LEFT_BRAKE_PIN)  == LOW);
-    bool rightBrake = (digitalRead(RIGHT_BRAKE_PIN) == LOW);
-
-    bool inTurnZone = isInTurnZone(_encoder.getRawAngle());
-
-    float leftWheelDelta = 0.0f;
-    float rightWheelDelta = 0.0f;
-    MotionSnapshot::Mode mode;
-
-    // Порядок проверок фиксирован спецификацией (раздел 8):
-    if (leftBrake && rightBrake) {
-        leftWheelDelta = 0.0f;
-        rightWheelDelta = 0.0f;
-        mode = MotionSnapshot::Mode::CALM;
-    } else if (!leftBrake && !rightBrake) {
-        leftWheelDelta  = valDelta * MOTOR_GEAR_RATIO / 360.0f * LEFT_WHEEL_SIGN;
-        rightWheelDelta = valDelta * MOTOR_GEAR_RATIO / 360.0f * RIGHT_WHEEL_SIGN;
-        mode = MotionSnapshot::Mode::NORMAL;
-    } else if (leftBrake && !rightBrake) {
-        if (inTurnZone) {
-            leftWheelDelta  = 0.0f;
-            rightWheelDelta = TURN_STEP * RIGHT_WHEEL_SIGN;
-            mode = MotionSnapshot::Mode::TURN;
-        } else {
-            leftWheelDelta  = 0.0f;
-            rightWheelDelta = 0.0f;
-            mode = MotionSnapshot::Mode::CALM;
-        }
-    } else { // rightBrake && !leftBrake
-        if (inTurnZone) {
-            leftWheelDelta  = TURN_STEP * LEFT_WHEEL_SIGN;
-            rightWheelDelta = 0.0f;
-            mode = MotionSnapshot::Mode::TURN;
-        } else {
-            leftWheelDelta  = 0.0f;
-            rightWheelDelta = 0.0f;
-            mode = MotionSnapshot::Mode::CALM;
-        }
+    // Раздел 6.2 + "поведение при первом запуске":
+    // на первом цикле управления предыдущего значения ещё нет,
+    // поэтому ValDelta принудительно = 0, а точка отсчёта фиксируется.
+    if (!_initialized) {
+        _previousContinuousAngle = continuousAngleDeg;
+        _valDelta = 0.0f;
+        _initialized = true;
+    } else {
+        _valDelta = continuousAngleDeg - _previousContinuousAngle;
+        _previousContinuousAngle = continuousAngleDeg;
     }
 
-    _leftOdrive.requestMove(leftWheelDelta);
-    _rightOdrive.requestMove(rightWheelDelta);
+    _inTurnZone = isInTurnZone(rawAngleDeg);
 
-    _lastSnapshot.valDelta = valDelta;
-    _lastSnapshot.leftWheelDelta = leftWheelDelta;
-    _lastSnapshot.rightWheelDelta = rightWheelDelta;
-    _lastSnapshot.mode = mode;
-    _lastSnapshot.leftBrake = leftBrake;
-    _lastSnapshot.rightBrake = rightBrake;
-    _lastSnapshot.inTurnZone = inTurnZone;
+    // Раздел 8.2: порядок проверок фиксирован.
+    if (leftBrake && rightBrake) {
+        // 1. BOTH BRAKES
+        _mode = MotionMode::CALM;
+        _leftWheelDelta = 0.0f;
+        _rightWheelDelta = 0.0f;
+
+    } else if (!leftBrake && !rightBrake) {
+        // 2. NO BRAKES -> NORMAL MOTION (раздел 7)
+        _mode = MotionMode::NORMAL;
+        float base = _valDelta * MOTOR_GEAR_RATIO / 360.0f;
+        _leftWheelDelta  = base * LEFT_WHEEL_SIGN;
+        _rightWheelDelta = base * RIGHT_WHEEL_SIGN;
+
+    } else if (leftBrake && !rightBrake) {
+        // 3. LEFT BRAKE ONLY -> processLeftBrake()
+        if (_inTurnZone) {
+            _mode = MotionMode::TURN;
+            _leftWheelDelta = 0.0f;
+            _rightWheelDelta = TURN_STEP * RIGHT_WHEEL_SIGN;
+        } else {
+            _mode = MotionMode::CALM;
+            _leftWheelDelta = 0.0f;
+            _rightWheelDelta = 0.0f;
+        }
+
+    } else {
+        // 4. RIGHT BRAKE ONLY (rightBrake && !leftBrake) -> processRightBrake()
+        if (_inTurnZone) {
+            _mode = MotionMode::TURN;
+            _leftWheelDelta = TURN_STEP * LEFT_WHEEL_SIGN;
+            _rightWheelDelta = 0.0f;
+        } else {
+            _mode = MotionMode::CALM;
+            _leftWheelDelta = 0.0f;
+            _rightWheelDelta = 0.0f;
+        }
+    }
 }
 
 MotionSnapshot MotionController::getSnapshot() const {
-    return _lastSnapshot;
+    MotionSnapshot s;
+    s.valDelta = _valDelta;
+    s.leftWheelDelta = _leftWheelDelta;
+    s.rightWheelDelta = _rightWheelDelta;
+    s.mode = _mode;
+    s.leftBrake = _leftBrake;
+    s.rightBrake = _rightBrake;
+    s.inTurnZone = _inTurnZone;
+    return s;
 }

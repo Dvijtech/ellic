@@ -1,43 +1,31 @@
-#ifndef ENCODER_H
-#define ENCODER_H
-
+#pragma once
 #include <Arduino.h>
+#include "Config.h"
 
 class Telemetry;
 
-struct EncoderSnapshot {
-    float rawAngle;         // последний валидный raw-угол AS5600, 0..360°
-    float continuousAngle;  // накопленный (безразрывный) угол вала
-    float lastDelta;        // последняя учтённая дельта (по проходу loop())
-};
-
+// Encoder: чтение AS5600, накопление continuousAngle.
+// Вызывается на каждом проходе loop(), без привязки к CONTROL_PERIOD_MS
+// (раздел 1 модулей / раздел 6.1 спецификации).
 class Encoder {
 public:
-    static const uint8_t AS5600_I2C_ADDRESS = 0x36;
-    static const uint8_t AS5600_RAW_ANGLE_REG = 0x0C;
-
     Encoder();
 
-    void setTelemetry(Telemetry* telemetry);
+    // telemetry может быть nullptr, тогда ошибки чтения просто не логируются
+    void begin(Telemetry* telemetry);
 
-    void begin();
-    void update(); // вызывается на каждом проходе loop(), без периода
-
-    float getRawAngle() const;        // последний валидный raw-угол, 0..360°
-    float getContinuousAngle() const; // накопленный угол
+    // Вызывать в каждом проходе loop().
+    void update();
 
     EncoderSnapshot getSnapshot() const;
 
 private:
+    bool readRawAngleDeg(float &outDeg);
+
     Telemetry* _telemetry;
 
-    float _rawAngle;
-    float _previousRawAngle;
-    float _continuousAngle;
-    float _lastDelta;
     bool  _initialized;
-
-    bool readRawAngleFromSensor(float &outAngleDeg);
+    float _previousRawAngle;  // последнее валидное сырое значение, град.
+    float _continuousAngle;   // накопленный угол, град.
+    float _lastDelta;         // последняя посчитанная дельта (уровень энкодера)
 };
-
-#endif

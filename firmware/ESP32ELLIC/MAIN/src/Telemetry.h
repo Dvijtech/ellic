@@ -1,43 +1,43 @@
-#ifndef TELEMETRY_H
-#define TELEMETRY_H
-
+#pragma once
 #include <Arduino.h>
-#include "Encoder.h"
-#include "MotionController.h"
-#include "ODriveUART.h"
+#include "Config.h"
 
-enum class LogLevel : uint8_t { INFO = 0, WARNING = 1, ERROR = 2, CRITICAL = 3 };
+class Encoder;
+class MotionController;
+class ODriveUART;
 
-struct TelemetrySample {
-    EncoderSnapshot encoder;
-    MotionSnapshot  motion;
-    OdriveSnapshot  left;
-    OdriveSnapshot  right;
-};
-
+// Telemetry: единственный модуль, отвечающий за вывод в Serial.
+// PULL-путь: collect() раз в TELEMETRY_PERIOD_MS, printScheduled() раз в
+// TELEMETRY_PRINT_PERIOD_MS (раздел 12.1).
+// PUSH-путь: log() вызывается любым модулем в момент события (раздел 12.2).
 class Telemetry {
 public:
-    static const uint32_t COLLECT_PERIOD_MS = 150;
-    static const uint32_t PRINT_PERIOD_MS   = 100;
-    static const uint8_t  LOG_BUFFER_SIZE   = 16;
+    Telemetry(Encoder* encoder, MotionController* motion,
+              ODriveUART* left, ODriveUART* right);
 
-    Telemetry(Encoder &encoder, MotionController &motion, ODriveUART &left, ODriveUART &right);
+    void begin(LogLevel minLevel = LogLevel::INFO);
 
-    void begin();
-    void update(); // вызывается на каждом проходе loop()
+    // Вызывать в каждом проходе loop().
+    void update();
 
+    // PUSH-путь. ERROR/CRITICAL печатаются немедленно и синхронно;
+    // INFO/WARNING складываются в кольцевой буфер до ближайшего printScheduled().
     void log(LogLevel level, const char* module, const char* msg);
 
 private:
-    Encoder &_encoder;
-    MotionController &_motion;
-    ODriveUART &_left;
-    ODriveUART &_right;
+    void collect();
+    void printScheduled();
+    void printSample() const;
+    void printLogBuffer();
+
+    Encoder* _encoder;
+    MotionController* _motion;
+    ODriveUART* _left;
+    ODriveUART* _right;
 
     TelemetrySample _sample;
     uint32_t _lastCollectMs;
     uint32_t _lastPrintMs;
-
     LogLevel _minLevel;
 
     struct LogEntry {
@@ -45,15 +45,8 @@ private:
         char module[16];
         char msg[80];
     };
+    static const int LOG_BUFFER_SIZE = 16;
     LogEntry _logBuffer[LOG_BUFFER_SIZE];
-    uint8_t _logHead;  // индекс следующей записи (по кругу)
-    uint8_t _logCount;
-
-    void collect();
-    void printScheduled();
-    void printImmediate(LogLevel level, const char* module, const char* msg);
-    void printOdrive(const char* label, const OdriveSnapshot &s);
-    const char* levelToStr(LogLevel level);
+    int _logWriteIndex; // следующая позиция записи (0..LOG_BUFFER_SIZE-1)
+    int _logCount;      // сколько записей ждут ближайшего printScheduled() (<= LOG_BUFFER_SIZE)
 };
-
-#endif
