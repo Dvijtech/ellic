@@ -299,7 +299,12 @@ void ODriveUART::applyDiagResult(int index, const char* buf) {
         case 0: _Iq = fval; break;                    // Iq_measured
         case 1: _Vq = fval; break;                    // Vq_setpoint
         case 2: _velEstimate = fval; break;            // vel_estimate
-        case 3: _axisState = (int)fval; break;         // current_state
+        case 3: 
+            _axisState = (int)fval; 
+            if (_axisState != 8) {  /// перезапускаем конфигурацию, если ODrive вышел из CLOSED_LOOP_CONTROL 
+                _configState = ConfigState::NotStarted;
+            }
+            break;         // current_state
         case 4: _axisError = (int)fval; break;         // axis0.error
         case 5: _motorError = (int)fval; break;        // motor.error
         case 6: _controllerError = (int)fval; break;   // controller.error
