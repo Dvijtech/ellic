@@ -204,8 +204,8 @@ void ODriveUART::sendConfigCommands() {
         "w axis0.trap_traj.config.accel_limit 10.0\n",
         "w axis0.trap_traj.config.decel_limit 10.0\n",
         "w axis0.requested_state 8\n",
-        "w axis0.controller.config.vel_integrator_gain 0.15",
-        "w axis0.controller.config.vel_gain 0.2\n",
+        "w axis0.controller.config.vel_integrator_gain 0.5\n",
+        "w axis0.controller.config.vel_gain 0.05\n",
         "w axis0.encoder.config.enable_phase_interpolation True\n"
     };
     const int n = sizeof(cmds) / sizeof(cmds[0]);
