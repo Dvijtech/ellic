@@ -15,8 +15,8 @@
 #define AS5600_RAW_ANGLE_REG 0x0C
 
 // LEFT ODrive (UART)
-#define ODRIVE_LEFT_RX_PIN 4
-#define ODRIVE_LEFT_TX_PIN 5
+#define ODRIVE_LEFT_RX_PIN 27
+#define ODRIVE_LEFT_TX_PIN 14
 
 // RIGHT ODrive (UART)
 #define ODRIVE_RIGHT_RX_PIN 26
@@ -33,10 +33,10 @@
 // Константы (раздел 5 спецификации)
 // =======================================================================
 
-static const uint32_t CONTROL_PERIOD_MS      = 300;   // период MotionController.update()
-static const float    MOTOR_GEAR_RATIO       = 4.4f;  // передаточное число редуктора
+static const uint32_t CONTROL_PERIOD_MS      = 200;   // период MotionController.update()
+static const float    MOTOR_GEAR_RATIO       = 7.0f;  // передаточное число редуктора
 static const float    TURN_ZONE_DEG          = 10.0f; // ширина зоны поворота
-static const float    TURN_STEP              = 0.03f; // шаг противоположного колеса при повороте (оборотов)
+static const float    TURN_STEP              = 0.3f; // шаг противоположного колеса при повороте (оборотов)
 static const float    LEFT_WHEEL_SIGN        = 1.0f;
 static const float    RIGHT_WHEEL_SIGN       = -1.0f;
 
@@ -45,7 +45,9 @@ static const uint32_t TELEMETRY_PRINT_PERIOD_MS = 1000; // период printSch
 
 static const uint32_t RESPONSE_TIMEOUT_MS   = 50;   // таймаут ответа UART ODrive
 static const int      ALIVE_FAIL_THRESHOLD  = 5;    // подряд неудач -> offline
-static const uint32_t DIAG_PERIOD_MS        = 1000; // мин. интервал фоновой диагностики
+static const uint32_t DIAG_PERIOD_MS        = 100; // мин. интервал фоновой диагностики
+
+static const uint32_t MOVE_INTER_CMD_DELAY_MS = 2;  // пауза перед новой командой после чужого/предыдущего обмена
 
 // =======================================================================
 // Общие перечисления и структуры-снапшоты (раздел 12.3)

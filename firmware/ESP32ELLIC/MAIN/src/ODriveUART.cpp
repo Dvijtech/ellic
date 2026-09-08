@@ -133,10 +133,15 @@ bool ODriveUART::moveWheel(float delta) {
     if (_requestPending) {
         char discard[64];
         waitForResponse(discard, sizeof(discard));
+        
+        delay(MOVE_INTER_CMD_DELAY_MS);  // зазор перед своим f0 после чужого (diag) обмена
     }
 
     // 2. Режим восстановления после предыдущего неудачного f 0
     if (_moveRecoveryRequired) {
+        
+        delay(MOVE_INTER_CMD_DELAY_MS);  //зазор перед повторной попыткой f0
+        
         // Отправляем только f 0 (без p 0)
         sendRequestAsync("f 0\n");
         char buf[64];
@@ -177,6 +182,8 @@ bool ODriveUART::moveWheel(float delta) {
         return false;
     }
 
+    delay(MOVE_INTER_CMD_DELAY_MS);  // зазор перед p0
+
     float newPosition = currentPosition + delta;
     char cmd[40];
     snprintf(cmd, sizeof(cmd), "p 0 %.4f\n", newPosition);
@@ -192,11 +199,14 @@ bool ODriveUART::moveWheel(float delta) {
 void ODriveUART::sendConfigCommands() {
     static const char* cmds[] = {
         "w axis0.controller.config.control_mode 3\n",
-        "w axis0.controller.config.input_mode 1\n",
+        "w axis0.controller.config.input_mode 5\n",
         "w axis0.trap_traj.config.vel_limit 2.0\n",
         "w axis0.trap_traj.config.accel_limit 10.0\n",
         "w axis0.trap_traj.config.decel_limit 10.0\n",
-        "w axis0.requested_state 8\n"
+        "w axis0.requested_state 8\n",
+        "w axis0.controller.config.vel_integrator_gain 0.15",
+        "w axis0.controller.config.vel_gain 0.2\n",
+        "w axis0.encoder.config.enable_phase_interpolation True\n"
     };
     const int n = sizeof(cmds) / sizeof(cmds[0]);
     for (int i = 0; i < n; i++) {
