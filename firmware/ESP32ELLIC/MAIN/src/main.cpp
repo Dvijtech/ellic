@@ -1,43 +1,75 @@
 #include <Arduino.h>
-
+#include <Wire.h>
+#include "Config.h"
 #include "Encoder.h"
 #include "MotionController.h"
 #include "ODriveCAN.h"
 #include "Telemetry.h"
 
-// One ODriveCAN instance owns the complete ODrive CAN bus.
-ODriveCAN odrive(nullptr);
-Encoder encoder(nullptr);
-MotionController motion(encoder, odrive, nullptr);
-Telemetry telemetry(encoder, motion, odrive);
+// Раздел 0: main.cpp содержит один экземпляр ODriveCAN, обслуживающий оба
+// логических канала (RIGHT node_id=1, LEFT node_id=2).
+Encoder encoder;
+MotionController motionController;
+ODriveCAN odriveCAN;
+
+Telemetry telemetry(&encoder, &motionController, &odriveCAN);
+
+uint32_t lastControlMs = 0;
 
 void setup() {
     Serial.begin(115200);
-    delay(100);
 
-    // Attach the telemetry sink after all objects have been constructed.
-    encoder.setTelemetry(&telemetry);
-    odrive.setTelemetry(&telemetry);
+    Wire.begin(AS5600_SDA_PIN, AS5600_SCL_PIN);
+    Wire.setClock(AS5600_I2C_CLOCK_HZ);
 
-    telemetry.begin();
-    telemetry.log(LogLevel::INFO, "main", "ELLIC startup");
+    pinMode(LEFT_BRAKE_PIN, INPUT_PULLUP);
+    pinMode(RIGHT_BRAKE_PIN, INPUT_PULLUP);
 
-    const bool encoderOk = encoder.begin();
-    telemetry.log(encoderOk ? LogLevel::INFO : LogLevel::WARNING,
-                  "main", encoderOk ? "Encoder initialized" : "Encoder initialization failed");
+    telemetry.begin(LogLevel::INFO);
 
-    const bool canOk = odrive.begin();
-    telemetry.log(canOk ? LogLevel::INFO : LogLevel::CRITICAL,
-                  "main", canOk ? "ODriveCAN initialized" : "ODriveCAN initialization failed");
+    encoder.begin(&telemetry);
+    motionController.begin();
 
-    motion.begin();
-    telemetry.log(LogLevel::INFO, "main", "MotionController initialized");
+    odriveCAN.setTelemetry(&telemetry);
+    odriveCAN.begin();
+
+    // Раздел 10.1/10.2: явная ASCII-конфигурация ODrive из ESP32 не
+    // выполняется. При работе по CAN она не предусмотрена в принципе -
+    // соответствующего метода в ODriveCAN намеренно нет.
+
+    telemetry.log(LogLevel::INFO, "main", "ELLIC system initialized (CAN)");
+
+    lastControlMs = millis();
 }
 
 void loop() {
+    // Раздел 11: encoder.update() - на каждом проходе, без периода.
     encoder.update();
-    odrive.update();
-    odrive.updateConfigure();
-    motion.update();
+
+    // Раздел 14.1: приём CAN-кадров и обновление кэша/online-статуса
+    // выполняется на каждом проходе loop(), не блокируясь телеметрией.
+    odriveCAN.update();
+
+    uint32_t now = millis();
+    if (now - lastControlMs >= CONTROL_PERIOD_MS) {
+        lastControlMs = now;
+
+        bool leftBrake  = (digitalRead(LEFT_BRAKE_PIN) == LOW);
+        bool rightBrake = (digitalRead(RIGHT_BRAKE_PIN) == LOW);
+
+        EncoderSnapshot encSnap = encoder.getSnapshot();
+
+        // Разделы 6.2-8: общее решение по ОБОИМ тормозам + Val сразу
+        // даёт оба приращения - leftWheelDelta и rightWheelDelta.
+        motionController.update(encSnap.rawAngle, encSnap.continuousAngle,
+                                 leftBrake, rightBrake);
+
+        // Раздел 9/14.2: дальше каналы независимы - недоступная/устаревшая
+        // позиция одного колеса не блокирует отправку команды другому.
+        odriveCAN.moveLeftWheel(motionController.getLeftWheelDelta());
+        odriveCAN.moveRightWheel(motionController.getRightWheelDelta());
+    }
+
+    // Раздел 12: телеметрия - собственные периоды collect()/printScheduled().
     telemetry.update();
 }

@@ -1,280 +1,266 @@
 #include "ODriveCAN.h"
 #include "Telemetry.h"
-#include <cstring>
+#include "driver/twai.h"
+#include <string.h>
 
-ODriveCAN::Channel ODriveCAN::makeChannel(uint8_t nodeId) {
-    Channel c{};
-    c.nodeId = nodeId;
-    c.online = false;
-    c.positionValid = false;
-    c.currentPosition = 0.0f;
-    c.velEstimate = 0.0f;
-    c.positionTimestampMs = 0;
-    c.lastValidFrameMs = 0;
-    c.diagnosticsTimestampMs = 0;
-    c.axisError = 0;
-    c.axisState = 0;
-    c.motorError = 0;
-    c.encoderError = 0;
-    c.controllerError = 0;
-    c.trajectoryDone = false;
-    c.iq = 0.0f;
-    c.busVoltage = 0.0f;
-    c.busCurrent = 0.0f;
-    c.txCount = 0;
-    c.rxCount = 0;
-    c.rxFailCount = 0;
-    c.lastTxCommand = 0;
-    c.lastRxCommand = 0;
-    return c;
+namespace {
+// CAN Simple command ID для fw 0.5.6 (раздел 9, 10.4, 12.0,
+// "Итого зафиксировал в спецификации")
+constexpr uint8_t CMD_HEARTBEAT             = 0x01;
+constexpr uint8_t CMD_GET_MOTOR_ERROR       = 0x03;
+constexpr uint8_t CMD_GET_ENCODER_ERROR     = 0x04;
+constexpr uint8_t CMD_GET_ENCODER_ESTIMATES = 0x09;
+constexpr uint8_t CMD_SET_INPUT_POS         = 0x0C;
+constexpr uint8_t CMD_GET_IQ                = 0x14;
+constexpr uint8_t CMD_GET_BUS_VI            = 0x17;
+constexpr uint8_t CMD_GET_CONTROLLER_ERROR  = 0x1D;
+
+uint32_t readU32(const uint8_t* p) {
+    uint32_t v;
+    memcpy(&v, p, sizeof(v));
+    return v;
 }
 
-ODriveCAN::ODriveCAN(Telemetry* telemetry)
-    : telemetry_(telemetry),
-      right_(makeChannel(RIGHT_NODE_ID)),
-      left_(makeChannel(LEFT_NODE_ID)),
-      initialized_(false) {}
-
-void ODriveCAN::setTelemetry(Telemetry* telemetry) { telemetry_ = telemetry; }
-
-bool ODriveCAN::begin() {
-    twai_general_config_t general = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX_PIN, CAN_RX_PIN, TWAI_MODE_NORMAL);
-    twai_timing_config_t timing = TWAI_TIMING_CONFIG_250KBITS();
-    twai_filter_config_t filter = TWAI_FILTER_CONFIG_ACCEPT_ALL();
-
-    esp_err_t err = twai_driver_install(&general, &timing, &filter);
-    if (err != ESP_OK) {
-        if (telemetry_) telemetry_->log(LogLevel::CRITICAL, "ODriveCAN", "TWAI driver install failed");
-        return false;
-    }
-
-    err = twai_start();
-    if (err != ESP_OK) {
-        if (telemetry_) telemetry_->log(LogLevel::CRITICAL, "ODriveCAN", "TWAI start failed");
-        return false;
-    }
-
-    initialized_ = true;
-    return true;
+uint64_t readU64(const uint8_t* p) {
+    uint64_t v;
+    memcpy(&v, p, sizeof(v));
+    return v;
 }
 
-void ODriveCAN::update() {
-    if (!initialized_) {
-        return;
-    }
+float readF32(const uint8_t* p) {
+    float v;
+    memcpy(&v, p, sizeof(v));
+    return v;
+}
+} // namespace
 
-    twai_message_t message{};
-    while (readFrame(message)) {
-        processFrame(message);
-    }
-
-    updateOnlineStates(millis());
+ODriveCAN::ODriveCAN() : _telemetry(nullptr) {
+    initChannel(_right, RIGHT_ODRIVE_NODE_ID, "RIGHT");
+    initChannel(_left, LEFT_ODRIVE_NODE_ID, "LEFT");
 }
 
-void ODriveCAN::updateConfigure() {
-    // Runtime ASCII/UART configuration is explicitly disabled by the specification.
+void ODriveCAN::initChannel(WheelChannel &ch, uint8_t nodeId, const char* label) {
+    ch.nodeId = nodeId;
+    ch.label = label;
+    ch.online = false;
+    ch.everReceivedFrame = false;
+    ch.lastFrameMs = 0;
+    ch.hasValidPosition = false;
+    ch.lastPosEstimateMs = 0;
+    ch.posEstimate = 0.0f;
+    ch.velEstimate = 0.0f;
+    ch.axisState = 0;
+    ch.axisError = 0;
+    ch.motorError = 0;
+    ch.encoderError = 0;
+    ch.controllerError = 0;
+    ch.trajectoryDone = false;
+    ch.Iq = 0.0f;
+    ch.busVoltage = 0.0f;
+    ch.busCurrent = 0.0f;
+    ch.txCount = 0;
+    ch.rxCount = 0;
+    ch.rxFailCount = 0;
+    ch.diagnosticsTimestampMs = 0;
 }
 
-uint32_t ODriveCAN::makeCanId(uint8_t nodeId, uint8_t command) {
-    return (static_cast<uint32_t>(nodeId) << 5) | command;
+void ODriveCAN::setTelemetry(Telemetry* telemetry) {
+    _telemetry = telemetry;
 }
 
-bool ODriveCAN::idMatches(uint32_t id, uint8_t nodeId, uint8_t command) {
-    return id == makeCanId(nodeId, command);
+void ODriveCAN::begin() {
+    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(
+        (gpio_num_t)CAN_TX_PIN, (gpio_num_t)CAN_RX_PIN, TWAI_MODE_NORMAL);
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS();
+    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+    twai_driver_install(&g_config, &t_config, &f_config);
+    twai_start();
 }
 
-bool ODriveCAN::readFrame(twai_message_t& message) {
-    return twai_receive(&message, 0) == ESP_OK;
-}
-
-ODriveCAN::Channel* ODriveCAN::channelForNode(uint8_t nodeId) {
-    if (nodeId == RIGHT_NODE_ID) return &right_;
-    if (nodeId == LEFT_NODE_ID) return &left_;
+ODriveCAN::WheelChannel* ODriveCAN::channelForNode(uint8_t nodeId) {
+    if (nodeId == _right.nodeId) return &_right;
+    if (nodeId == _left.nodeId) return &_left;
     return nullptr;
 }
 
-void ODriveCAN::markValid(Channel& channel, uint8_t command, uint32_t now) {
-    const bool wasOnline = channel.online;
-    channel.online = true;
-    channel.lastValidFrameMs = now;
-    channel.rxCount++;
-    channel.lastRxCommand = command;
-    if (!wasOnline) {
-        logOnline(channel, channel.nodeId == RIGHT_NODE_ID ? "RIGHT" : "LEFT");
+void ODriveCAN::processFrame(uint32_t canId, const uint8_t* data, uint8_t dlc, uint32_t nowMs) {
+    uint8_t nodeId = (uint8_t)((canId >> 5) & 0x3F);
+    uint8_t cmdId  = (uint8_t)(canId & 0x1F);
+
+    WheelChannel* chPtr = channelForNode(nodeId);
+    if (chPtr == nullptr) {
+        return; // кадр от неизвестного node_id - игнорируется
+    }
+    WheelChannel &ch = *chPtr;
+
+    bool wasOffline = !ch.online;
+    ch.everReceivedFrame = true;
+    ch.lastFrameMs = nowMs;
+    ch.online = true;
+    ch.rxCount++;
+
+    if (wasOffline && _telemetry != nullptr) {
+        _telemetry->log(LogLevel::INFO, ch.label, "ODrive CAN: online");
+    }
+
+    switch (cmdId) {
+        case CMD_HEARTBEAT:
+            // Раздел 10.4: Axis_Error(u32 @0) Axis_State(u8 @4)
+            // Motor/Encoder/Controller_Error_Flag(бит @5.0/6.0/7.0) Trajectory_Done_Flag(бит @7.7)
+            if (dlc >= 7) {
+                ch.axisError = readU32(&data[0]);
+                ch.axisState = data[4];
+                ch.trajectoryDone = (data[7] & 0x80) != 0;
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        case CMD_GET_MOTOR_ERROR:
+            // Внимание: у fw 0.5.6 это поле 64-битное (см. отчёт после кода).
+            if (dlc >= 8) {
+                ch.motorError = readU64(&data[0]);
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        case CMD_GET_ENCODER_ERROR:
+            if (dlc >= 4) {
+                ch.encoderError = readU32(&data[0]);
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        case CMD_GET_ENCODER_ESTIMATES:
+            if (dlc >= 8) {
+                ch.posEstimate = readF32(&data[0]);
+                ch.velEstimate = readF32(&data[4]);
+                ch.hasValidPosition = true;
+                ch.lastPosEstimateMs = nowMs;
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        case CMD_GET_IQ:
+            // байты 0..3 - Iq_Setpoint (не используется, "Вопрос 1" спецификации),
+            // байты 4..7 - Iq_Measured (используется как фактический ток мотора).
+            if (dlc >= 8) {
+                ch.Iq = readF32(&data[4]);
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        case CMD_GET_BUS_VI:
+            if (dlc >= 8) {
+                ch.busVoltage = readF32(&data[0]);
+                ch.busCurrent = readF32(&data[4]);
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        case CMD_GET_CONTROLLER_ERROR:
+            if (dlc >= 4) {
+                ch.controllerError = readU32(&data[0]);
+                ch.diagnosticsTimestampMs = nowMs;
+            }
+            break;
+
+        default:
+            // Прочие CAN Simple сообщения (Get_Version, Encoder Count и т.п.)
+            // системой не используются и игнорируются.
+            break;
     }
 }
 
-void ODriveCAN::processFrame(const twai_message_t& message) {
-    if (message.extd || message.rtr || message.data_length_code > 8) {
-        return;
-    }
-
-    const uint8_t nodeId = static_cast<uint8_t>((message.identifier >> 5) & 0x3F);
-    const uint8_t command = static_cast<uint8_t>(message.identifier & 0x1F);
-    Channel* channel = channelForNode(nodeId);
-    if (!channel) {
-        return;
-    }
-
-    const uint32_t now = millis();
-    bool valid = false;
-
-    if (command == CMD_HEARTBEAT && message.data_length_code >= 8) {
-        channel->axisError = static_cast<uint32_t>(message.data[0]) |
-                             (static_cast<uint32_t>(message.data[1]) << 8) |
-                             (static_cast<uint32_t>(message.data[2]) << 16) |
-                             (static_cast<uint32_t>(message.data[3]) << 24);
-        channel->axisState = message.data[4];
-        channel->trajectoryDone = (message.data[5] & 0x08U) != 0;
-        valid = true;
-    } else if (command == CMD_MOTOR_ERROR && message.data_length_code >= 4) {
-        channel->motorError = static_cast<uint32_t>(message.data[0]) |
-                              (static_cast<uint32_t>(message.data[1]) << 8) |
-                              (static_cast<uint32_t>(message.data[2]) << 16) |
-                              (static_cast<uint32_t>(message.data[3]) << 24);
-        valid = true;
-    } else if (command == CMD_ENCODER_ERROR && message.data_length_code >= 4) {
-        channel->encoderError = static_cast<uint32_t>(message.data[0]) |
-                                (static_cast<uint32_t>(message.data[1]) << 8) |
-                                (static_cast<uint32_t>(message.data[2]) << 16) |
-                                (static_cast<uint32_t>(message.data[3]) << 24);
-        valid = true;
-    } else if (command == CMD_ENCODER_ESTIMATES && message.data_length_code >= 8) {
-        float pos = 0.0f;
-        float vel = 0.0f;
-        memcpy(&pos, &message.data[0], sizeof(float));
-        memcpy(&vel, &message.data[4], sizeof(float));
-        channel->currentPosition = pos;
-        channel->velEstimate = vel;
-        channel->positionValid = true;
-        channel->positionTimestampMs = now;
-        valid = true;
-    } else if (command == CMD_GET_IQ && message.data_length_code >= 8) {
-        float iqSetpoint = 0.0f;
-        float iqMeasured = 0.0f;
-        memcpy(&iqSetpoint, &message.data[0], sizeof(float));
-        memcpy(&iqMeasured, &message.data[4], sizeof(float));
-        (void)iqSetpoint;
-        channel->iq = iqMeasured;
-        valid = true;
-    } else if (command == CMD_GET_BUS_VOLTAGE_CURRENT && message.data_length_code >= 8) {
-        memcpy(&channel->busVoltage, &message.data[0], sizeof(float));
-        memcpy(&channel->busCurrent, &message.data[4], sizeof(float));
-        valid = true;
-    } else if (command == CMD_CONTROLLER_ERROR && message.data_length_code >= 4) {
-        channel->controllerError = static_cast<uint32_t>(message.data[0]) |
-                                   (static_cast<uint32_t>(message.data[1]) << 8) |
-                                   (static_cast<uint32_t>(message.data[2]) << 16) |
-                                   (static_cast<uint32_t>(message.data[3]) << 24);
-        valid = true;
-    }
-
-    if (valid) {
-        markValid(*channel, command, now);
-        channel->diagnosticsTimestampMs = now;
-    }
-}
-
-void ODriveCAN::updateOnlineStates(uint32_t now) {
-    Channel* channels[2] = {&right_, &left_};
-    const char* names[2] = {"RIGHT", "LEFT"};
-
-    for (int i = 0; i < 2; ++i) {
-        Channel& channel = *channels[i];
-        if (channel.online && static_cast<uint32_t>(now - channel.lastValidFrameMs) > CAN_NODE_STALE_MS) {
-            channel.online = false;
-            logOffline(channel, names[i]);
+void ODriveCAN::refreshOnlineState(uint32_t nowMs) {
+    WheelChannel* channels[2] = { &_right, &_left };
+    for (WheelChannel* chPtr : channels) {
+        WheelChannel &ch = *chPtr;
+        if (ch.online && ch.everReceivedFrame &&
+            (nowMs - ch.lastFrameMs) > CAN_NODE_STALE_MS) {
+            ch.online = false;
+            if (_telemetry != nullptr) {
+                _telemetry->log(LogLevel::WARNING, ch.label, "ODrive CAN: offline (stale)");
+            }
         }
-
-        if (channel.positionValid && static_cast<uint32_t>(now - channel.positionTimestampMs) > CAN_NODE_STALE_MS) {
-            channel.positionValid = false;
-        }
     }
 }
 
-bool ODriveCAN::sendFrame(uint32_t canId, const uint8_t* data, uint8_t len, Channel& channel, uint8_t command) {
-    if (!initialized_ || len > 8) {
-        channel.rxFailCount++;
+void ODriveCAN::update() {
+    twai_message_t msg;
+    // Раздел 14.1/14.3: приём всех доступных кадров без блокировки.
+    while (twai_receive(&msg, 0) == ESP_OK) {
+        if (!msg.rtr) {
+            processFrame(msg.identifier, msg.data, msg.data_length_code, millis());
+        }
+    }
+    refreshOnlineState(millis());
+}
+
+bool ODriveCAN::moveWheelInternal(WheelChannel &ch, float delta) {
+    uint32_t now = millis();
+
+    // Раздел 9/13: если текущая позиция недоступна или устарела -
+    // команда для этого колеса в этом цикле не отправляется.
+    if (!ch.hasValidPosition || (now - ch.lastPosEstimateMs) > CAN_NODE_STALE_MS) {
+        ch.rxFailCount++;
         return false;
     }
 
-    twai_message_t message{};
-    message.identifier = canId;
-    message.extd = 0;
-    message.rtr = 0;
-    message.data_length_code = len;
-    memcpy(message.data, data, len);
+    float newPosition = ch.posEstimate + delta;
 
-    const esp_err_t err = twai_transmit(&message, 0);
-    if (err != ESP_OK) {
-        channel.rxFailCount++;
-        logRxError(channel.nodeId == RIGHT_NODE_ID ? "RIGHT CAN transmit failed" : "LEFT CAN transmit failed");
-        return false;
+    twai_message_t msg = {};
+    msg.identifier = ((uint32_t)ch.nodeId << 5) | CMD_SET_INPUT_POS;
+    msg.data_length_code = 8;
+    memcpy(&msg.data[0], &newPosition, sizeof(float));
+    int16_t velFF = 0;     // раздел 9: move_incremental не используется;
+    int16_t torqueFF = 0;  // Vel_FF/Torque_FF спецификацией не заданы -> 0.
+    memcpy(&msg.data[4], &velFF, sizeof(velFF));
+    memcpy(&msg.data[6], &torqueFF, sizeof(torqueFF));
+
+    if (twai_transmit(&msg, 0) == ESP_OK) {
+        ch.txCount++;
+        return true;
     }
 
-    channel.txCount++;
-    channel.lastTxCommand = command;
-    return true;
+    if (_telemetry != nullptr) {
+        _telemetry->log(LogLevel::WARNING, ch.label, "ODrive CAN: Set Input Pos TX failed");
+    }
+    return false;
 }
 
-bool ODriveCAN::sendSetInputPos(Channel& channel, float newPosition) {
-    uint8_t data[8] = {};
-    memcpy(&data[0], &newPosition, sizeof(float));
-    // vel_ff and torque_ff are left at zero.
-    return sendFrame(makeCanId(channel.nodeId, CMD_SET_INPUT_POS), data, sizeof(data), channel, CMD_SET_INPUT_POS);
+bool ODriveCAN::moveLeftWheel(float delta) {
+    return moveWheelInternal(_left, delta);
 }
 
-bool ODriveCAN::moveRight(float wheelDelta) {
-    if (!right_.positionValid) return false;
-    const float newPosition = right_.currentPosition + wheelDelta;
-    return sendSetInputPos(right_, newPosition);
+bool ODriveCAN::moveRightWheel(float delta) {
+    return moveWheelInternal(_right, delta);
 }
 
-bool ODriveCAN::moveLeft(float wheelDelta) {
-    if (!left_.positionValid) return false;
-    const float newPosition = left_.currentPosition + wheelDelta;
-    return sendSetInputPos(left_, newPosition);
+OdriveSnapshot ODriveCAN::snapshotFrom(const WheelChannel &ch) const {
+    OdriveSnapshot s;
+    s.online = ch.online;
+    s.axisState = ch.axisState;
+    s.axisError = ch.axisError;
+    s.motorError = ch.motorError;
+    s.encoderError = ch.encoderError;
+    s.controllerError = ch.controllerError;
+    s.trajectoryDone = ch.trajectoryDone;
+    s.Iq = ch.Iq;
+    s.velEstimate = ch.velEstimate;
+    s.busVoltage = ch.busVoltage;
+    s.busCurrent = ch.busCurrent;
+    s.txCount = ch.txCount;
+    s.rxCount = ch.rxCount;
+    s.rxFailCount = ch.rxFailCount;
+    s.diagnosticsTimestampMs = ch.diagnosticsTimestampMs;
+    return s;
 }
 
-bool ODriveCAN::getRightSnapshot(OdriveSnapshot& snapshot) const {
-    snapshot = getSnapshotRight();
-    return true;
+OdriveSnapshot ODriveCAN::getLeftSnapshot() const {
+    return snapshotFrom(_left);
 }
 
-bool ODriveCAN::getLeftSnapshot(OdriveSnapshot& snapshot) const {
-    snapshot = getSnapshotLeft();
-    return true;
-}
-
-OdriveSnapshot ODriveCAN::getSnapshotRight() const {
-    const Channel& c = right_;
-    return {c.online, c.axisState, c.axisError, c.motorError, c.controllerError, c.encoderError,
-            c.trajectoryDone, c.iq, c.busVoltage, c.busCurrent, c.velEstimate, c.currentPosition,
-            c.positionValid, c.positionTimestampMs, c.diagnosticsTimestampMs, c.txCount, c.rxCount,
-            c.rxFailCount, c.lastTxCommand, c.lastRxCommand};
-}
-
-OdriveSnapshot ODriveCAN::getSnapshotLeft() const {
-    const Channel& c = left_;
-    return {c.online, c.axisState, c.axisError, c.motorError, c.controllerError, c.encoderError,
-            c.trajectoryDone, c.iq, c.busVoltage, c.busCurrent, c.velEstimate, c.currentPosition,
-            c.positionValid, c.positionTimestampMs, c.diagnosticsTimestampMs, c.txCount, c.rxCount,
-            c.rxFailCount, c.lastTxCommand, c.lastRxCommand};
-}
-
-bool ODriveCAN::rightPositionValid() const { return right_.positionValid; }
-bool ODriveCAN::leftPositionValid() const { return left_.positionValid; }
-float ODriveCAN::rightCurrentPosition() const { return right_.currentPosition; }
-float ODriveCAN::leftCurrentPosition() const { return left_.currentPosition; }
-
-void ODriveCAN::logOffline(Channel& channel, const char* name) {
-    if (telemetry_) telemetry_->log(LogLevel::WARNING, "ODriveCAN", name == nullptr ? "ODrive offline" : (String(name) + " ODrive offline").c_str());
-}
-
-void ODriveCAN::logOnline(Channel& channel, const char* name) {
-    if (telemetry_) telemetry_->log(LogLevel::INFO, "ODriveCAN", name == nullptr ? "ODrive online" : (String(name) + " ODrive online").c_str());
-}
-
-void ODriveCAN::logRxError(const char* message) {
-    if (telemetry_) telemetry_->log(LogLevel::ERROR, "ODriveCAN", message);
+OdriveSnapshot ODriveCAN::getRightSnapshot() const {
+    return snapshotFrom(_right);
 }

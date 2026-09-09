@@ -1,118 +1,84 @@
 #pragma once
-
 #include <Arduino.h>
-#include "driver/twai.h"
-
-struct OdriveSnapshot {
-    bool online;
-    int axisState;
-    uint32_t axisError;
-    uint32_t motorError;
-    uint32_t controllerError;
-    uint32_t encoderError;
-    bool trajectoryDone;
-    float iq;
-    float busVoltage;
-    float busCurrent;
-    float velEstimate;
-    float currentPosition;
-    bool positionValid;
-    uint32_t positionTimestampMs;
-    uint32_t diagnosticsTimestampMs;
-    uint32_t txCount;
-    uint32_t rxCount;
-    uint32_t rxFailCount;
-    uint8_t lastTxCommand;
-    uint8_t lastRxCommand;
-};
+#include "Config.h"
 
 class Telemetry;
 
+// ODriveCAN: единственный модуль, обращающийся к CAN-шине ODrive (раздел 0, 14).
+// Обслуживает оба логических канала - RIGHT (node_id=1) и LEFT (node_id=2) -
+// в одном экземпляре. Хранит последнюю известную позицию/скорость каждого
+// WHEEL, диагностический кэш и online-статус каждого канала независимо
+// (раздел 2, 13). Конфигурация самих ODrive (node_id, rate_ms и т.п.)
+// выполняется заранее вне ESP32 (раздел 10.2) - соответствующего публичного
+// configure() в этом классе намеренно нет.
 class ODriveCAN {
 public:
-    static constexpr uint32_t CAN_BITRATE = 250000;
-    static constexpr gpio_num_t CAN_TX_PIN = GPIO_NUM_16;
-    static constexpr gpio_num_t CAN_RX_PIN = GPIO_NUM_17;
-    static constexpr uint32_t CAN_NODE_STALE_MS = 300;
+    ODriveCAN();
 
-    static constexpr uint8_t RIGHT_NODE_ID = 1;
-    static constexpr uint8_t LEFT_NODE_ID = 2;
-
-    static constexpr uint8_t CMD_HEARTBEAT = 0x01;
-    static constexpr uint8_t CMD_MOTOR_ERROR = 0x03;
-    static constexpr uint8_t CMD_ENCODER_ERROR = 0x04;
-    static constexpr uint8_t CMD_ENCODER_ESTIMATES = 0x09;
-    static constexpr uint8_t CMD_SET_INPUT_POS = 0x0C;
-    static constexpr uint8_t CMD_GET_IQ = 0x14;
-    static constexpr uint8_t CMD_GET_BUS_VOLTAGE_CURRENT = 0x17;
-    static constexpr uint8_t CMD_CONTROLLER_ERROR = 0x1D;
-
-    explicit ODriveCAN(Telemetry* telemetry = nullptr);
-
-    bool begin();
     void setTelemetry(Telemetry* telemetry);
+
+    // Инициализирует TWAI-контроллер ESP32 (раздел 4: TX=GPIO16, RX=GPIO17,
+    // 250000 бит/с, транссивер SN65HVD230).
+    void begin();
+
+    // Вызывать в каждом проходе loop(): принимает все доступные CAN-кадры,
+    // обновляет диагностический кэш LEFT/RIGHT и их online-статус (раздел 14.1).
+    // Не блокируется и не ждёт конкретных сообщений (раздел 14.3).
     void update();
 
-    bool moveRight(float wheelDelta);
-    bool moveLeft(float wheelDelta);
+    // MoveWheel для соответствующего колеса (раздел 9, 14.2):
+    // newPosition = последняя валидная Pos_Estimate + delta -> Set Input Pos.
+    // Возвращает false, если позиция WHEEL недоступна или устарела
+    // (раздел 13.1) - в этом случае команда для этого колеса в этом цикле
+    // не отправляется. Второе колесо на это не влияет.
+    bool moveLeftWheel(float delta);
+    bool moveRightWheel(float delta);
 
-    bool getRightSnapshot(OdriveSnapshot& snapshot) const;
-    bool getLeftSnapshot(OdriveSnapshot& snapshot) const;
-
-    OdriveSnapshot getSnapshotRight() const;
-    OdriveSnapshot getSnapshotLeft() const;
-
-    bool rightPositionValid() const;
-    bool leftPositionValid() const;
-    float rightCurrentPosition() const;
-    float leftCurrentPosition() const;
-
-    // Kept as a no-op because runtime ASCII/UART configuration is disabled by the specification.
-    void updateConfigure();
+    OdriveSnapshot getLeftSnapshot() const;
+    OdriveSnapshot getRightSnapshot() const;
 
 private:
-    struct Channel {
+    struct WheelChannel {
         uint8_t nodeId;
+        const char* label;
+
         bool online;
-        bool positionValid;
-        float currentPosition;
+        bool everReceivedFrame;
+        uint32_t lastFrameMs;
+
+        bool hasValidPosition;
+        uint32_t lastPosEstimateMs;
+        float posEstimate;
         float velEstimate;
-        uint32_t positionTimestampMs;
-        uint32_t lastValidFrameMs;
-        uint32_t diagnosticsTimestampMs;
+
+        int      axisState;
         uint32_t axisError;
-        uint8_t axisState;
-        uint32_t motorError;
+        uint64_t motorError;
         uint32_t encoderError;
         uint32_t controllerError;
-        bool trajectoryDone;
-        float iq;
+        bool     trajectoryDone;
+
+        float Iq;
         float busVoltage;
         float busCurrent;
+
         uint32_t txCount;
         uint32_t rxCount;
         uint32_t rxFailCount;
-        uint8_t lastTxCommand;
-        uint8_t lastRxCommand;
+        uint32_t diagnosticsTimestampMs;
     };
 
-    Telemetry* telemetry_;
-    Channel right_;
-    Channel left_;
-    bool initialized_;
+    static void initChannel(WheelChannel &ch, uint8_t nodeId, const char* label);
+    WheelChannel* channelForNode(uint8_t nodeId);
 
-    static uint32_t makeCanId(uint8_t nodeId, uint8_t command);
-    static bool idMatches(uint32_t id, uint8_t nodeId, uint8_t command);
-    static Channel makeChannel(uint8_t nodeId);
+    // frameData должен указывать минимум на dlc байт полезной нагрузки кадра.
+    void processFrame(uint32_t canId, const uint8_t* frameData, uint8_t dlc, uint32_t nowMs);
+    void refreshOnlineState(uint32_t nowMs);
 
-    bool sendSetInputPos(Channel& channel, float newPosition);
-    bool sendFrame(uint32_t canId, const uint8_t* data, uint8_t len, Channel& channel, uint8_t command);
-    bool readFrame(twai_message_t& message);
-    void processFrame(const twai_message_t& message);
-    Channel* channelForNode(uint8_t nodeId);
-    void markValid(Channel& channel, uint8_t command, uint32_t now);
-    void updateOnlineStates(uint32_t now);
-    void logOffline(Channel& channel, const char* name);
-    void logOnline(Channel& channel, const char* name);
-    void logRxError(const char* message);
+    bool moveWheelInternal(WheelChannel &ch, float delta);
+    OdriveSnapshot snapshotFrom(const WheelChannel &ch) const;
+
+    Telemetry* _telemetry;
+    WheelChannel _right; // node_id = RIGHT_ODRIVE_NODE_ID (1)
+    WheelChannel _left;  // node_id = LEFT_ODRIVE_NODE_ID  (2)
 };

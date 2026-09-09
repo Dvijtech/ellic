@@ -1,51 +1,39 @@
 #pragma once
-
 #include <Arduino.h>
-#include "Encoder.h"
-#include "ODriveCAN.h"
+#include "Config.h"
 
-struct MotionSnapshot {
-    float valDelta;
-    float leftWheelDelta;
-    float rightWheelDelta;
-    enum class Mode { NORMAL, CALM, TURN } mode;
-    bool leftBrake;
-    bool rightBrake;
-    bool inTurnZone;
-};
-
-class Telemetry;
-
+// MotionController: расчёт ValDelta, логика тормозов/поворота,
+// вычисление leftWheelDelta / rightWheelDelta.
+// Вызывается раз в CONTROL_PERIOD_MS (раздел 6.2, 7, 8 спецификации).
 class MotionController {
 public:
-    static constexpr uint32_t CONTROL_PERIOD_MS = 300;
-    static constexpr float MOTOR_GEAR_RATIO = 4.4f;
-    static constexpr float TURN_ZONE_DEG = 10.0f;
-    static constexpr float TURN_STEP = 0.03f;
-    static constexpr float LEFT_WHEEL_SIGN = 1.0f;
-    static constexpr float RIGHT_WHEEL_SIGN = -1.0f;
-    static constexpr uint8_t LEFT_BRAKE_PIN = 32;
-    static constexpr uint8_t RIGHT_BRAKE_PIN = 33;
-
-    MotionController(Encoder& encoder, ODriveCAN& odrive, Telemetry* telemetry = nullptr);
+    MotionController();
 
     void begin();
-    void update();
+
+    // rawAngleDeg      - текущий Val (0..360), для проверки TURN_ZONE
+    // continuousAngleDeg - текущий continuous angle, для ValDelta
+    // leftBrake/rightBrake - true, если тормоз нажат (digitalRead == LOW)
+    void update(float rawAngleDeg, float continuousAngleDeg,
+                bool leftBrake, bool rightBrake);
+
+    float getLeftWheelDelta() const  { return _leftWheelDelta; }
+    float getRightWheelDelta() const { return _rightWheelDelta; }
+
     MotionSnapshot getSnapshot() const;
 
 private:
-    Encoder& encoder_;
-    ODriveCAN& odrive_;
-    Telemetry* telemetry_;
+    static bool isInTurnZone(float angleDeg);
 
-    uint32_t lastControlMs_;
-    bool controlInitialized_;
-    float previousControlAngle_;
-    MotionSnapshot snapshot_;
+    bool  _initialized;
+    float _previousContinuousAngle;
 
-    bool isTurnZone(float rawAngle) const;
-    void setCalm();
-    void setNormal(float valDelta);
-    void processLeftBrake(float rawAngle);
-    void processRightBrake(float rawAngle);
+    float _valDelta;
+    float _leftWheelDelta;
+    float _rightWheelDelta;
+
+    bool _leftBrake;
+    bool _rightBrake;
+    bool _inTurnZone;
+    MotionMode _mode;
 };
