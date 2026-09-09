@@ -1,82 +1,43 @@
 #include <Arduino.h>
-#include <Wire.h>
-#include "Config.h"
+
 #include "Encoder.h"
 #include "MotionController.h"
-#include "ODriveUART.h"
+#include "ODriveCAN.h"
 #include "Telemetry.h"
 
-// Раздел 0: main.cpp содержит ровно два экземпляра ODriveUART - LEFT и RIGHT.
-Encoder encoder;
-MotionController motionController;
-
-HardwareSerial SerialOdriveLeft(1);
-HardwareSerial SerialOdriveRight(2);
-
-ODriveUART odriveLeft(SerialOdriveLeft, ODRIVE_LEFT_RX_PIN, ODRIVE_LEFT_TX_PIN, "LEFT");
-ODriveUART odriveRight(SerialOdriveRight, ODRIVE_RIGHT_RX_PIN, ODRIVE_RIGHT_TX_PIN, "RIGHT");
-
-Telemetry telemetry(&encoder, &motionController, &odriveLeft, &odriveRight);
-
-uint32_t lastControlMs = 0;
+// One ODriveCAN instance owns the complete ODrive CAN bus.
+ODriveCAN odrive(nullptr);
+Encoder encoder(nullptr);
+MotionController motion(encoder, odrive, nullptr);
+Telemetry telemetry(encoder, motion, odrive);
 
 void setup() {
     Serial.begin(115200);
+    delay(100);
 
-    Wire.begin(AS5600_SDA_PIN, AS5600_SCL_PIN);
-    Wire.setClock(AS5600_I2C_CLOCK_HZ);
+    // Attach the telemetry sink after all objects have been constructed.
+    encoder.setTelemetry(&telemetry);
+    odrive.setTelemetry(&telemetry);
 
-    pinMode(LEFT_BRAKE_PIN, INPUT_PULLUP);
-    pinMode(RIGHT_BRAKE_PIN, INPUT_PULLUP);
+    telemetry.begin();
+    telemetry.log(LogLevel::INFO, "main", "ELLIC startup");
 
-    telemetry.begin(LogLevel::INFO);
+    const bool encoderOk = encoder.begin();
+    telemetry.log(encoderOk ? LogLevel::INFO : LogLevel::WARNING,
+                  "main", encoderOk ? "Encoder initialized" : "Encoder initialization failed");
 
-    encoder.begin(&telemetry);
-    motionController.begin();
+    const bool canOk = odrive.begin();
+    telemetry.log(canOk ? LogLevel::INFO : LogLevel::CRITICAL,
+                  "main", canOk ? "ODriveCAN initialized" : "ODriveCAN initialization failed");
 
-    odriveLeft.setTelemetry(&telemetry);
-    odriveRight.setTelemetry(&telemetry);
-    odriveLeft.begin();
-    odriveRight.begin();
-
-    // Раздел 10.1: явный configure() из setup() ОТКЛЮЧЁН.
-    // leftODrive.configure();
-    // rightODrive.configure();
-
-    telemetry.log(LogLevel::INFO, "main", "ELLIC system initialized");
-
-    lastControlMs = millis();
+    motion.begin();
+    telemetry.log(LogLevel::INFO, "main", "MotionController initialized");
 }
 
 void loop() {
-    // Раздел 11: encoder.update() - на каждом проходе, без периода.
     encoder.update();
-
-    // Раздел 14: диспетчер каждого ODrive (конфигурация -> диагностика)
-    // обрабатывается на каждом проходе loop().
-    odriveLeft.update();
-    odriveRight.update();
-
-    uint32_t now = millis();
-    if (now - lastControlMs >= CONTROL_PERIOD_MS) {
-        lastControlMs = now;
-
-        bool leftBrake  = (digitalRead(LEFT_BRAKE_PIN) == LOW);
-        bool rightBrake = (digitalRead(RIGHT_BRAKE_PIN) == LOW);
-
-        EncoderSnapshot encSnap = encoder.getSnapshot();
-
-        // Разделы 6.2-8: общее решение по ОБОИМ тормозам + Val сразу
-        // даёт оба приращения - leftWheelDelta и rightWheelDelta.
-        motionController.update(encSnap.rawAngle, encSnap.continuousAngle,
-                                 leftBrake, rightBrake);
-
-        // Раздел 9/14: дальше каналы независимы - ошибка одного не
-        // блокирует отправку команды другому.
-        odriveLeft.moveWheel(motionController.getLeftWheelDelta());
-        odriveRight.moveWheel(motionController.getRightWheelDelta());
-    }
-
-    // Раздел 12: телеметрия - собственные периоды collect()/printScheduled().
+    odrive.update();
+    odrive.updateConfigure();
+    motion.update();
     telemetry.update();
 }

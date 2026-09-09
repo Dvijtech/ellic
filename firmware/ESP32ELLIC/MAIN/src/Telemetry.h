@@ -1,52 +1,61 @@
 #pragma once
+
 #include <Arduino.h>
-#include "Config.h"
+#include "Encoder.h"
+#include "MotionController.h"
+#include "ODriveCAN.h"
 
-class Encoder;
-class MotionController;
-class ODriveUART;
+// ERROR/CRITICAL are printed immediately; INFO/WARNING are buffered.
+enum class LogLevel { INFO, WARNING, ERROR, CRITICAL };
 
-// Telemetry: единственный модуль, отвечающий за вывод в Serial.
-// PULL-путь: collect() раз в TELEMETRY_PERIOD_MS, printScheduled() раз в
-// TELEMETRY_PRINT_PERIOD_MS (раздел 12.1).
-// PUSH-путь: log() вызывается любым модулем в момент события (раздел 12.2).
+struct TelemetrySample {
+    EncoderSnapshot encoder;
+    MotionSnapshot motion;
+    OdriveSnapshot left;
+    OdriveSnapshot right;
+};
+
 class Telemetry {
 public:
-    Telemetry(Encoder* encoder, MotionController* motion,
-              ODriveUART* left, ODriveUART* right);
+    static constexpr uint32_t periodMs = 150;
+    static constexpr uint32_t printPeriodMs = 100;
+    static constexpr size_t LOG_BUFFER_SIZE = 16;
+    static constexpr size_t LOG_TEXT_SIZE = 96;
 
-    void begin(LogLevel minLevel = LogLevel::INFO);
+    Telemetry(Encoder& encoder, MotionController& motion, ODriveCAN& odrive);
 
-    // Вызывать в каждом проходе loop().
+    void begin();
     void update();
-
-    // PUSH-путь. ERROR/CRITICAL печатаются немедленно и синхронно;
-    // INFO/WARNING складываются в кольцевой буфер до ближайшего printScheduled().
     void log(LogLevel level, const char* module, const char* msg);
 
+    const TelemetrySample& getSample() const;
+
 private:
-    void collect();
-    void printScheduled();
-    void printSample() const;
-    void printLogBuffer();
-
-    Encoder* _encoder;
-    MotionController* _motion;
-    ODriveUART* _left;
-    ODriveUART* _right;
-
-    TelemetrySample _sample;
-    uint32_t _lastCollectMs;
-    uint32_t _lastPrintMs;
-    LogLevel _minLevel;
-
     struct LogEntry {
         LogLevel level;
-        char module[16];
-        char msg[80];
+        char module[24];
+        char message[LOG_TEXT_SIZE];
     };
-    static const int LOG_BUFFER_SIZE = 16;
-    LogEntry _logBuffer[LOG_BUFFER_SIZE];
-    int _logWriteIndex; // следующая позиция записи (0..LOG_BUFFER_SIZE-1)
-    int _logCount;      // сколько записей ждут ближайшего printScheduled() (<= LOG_BUFFER_SIZE)
+
+    Encoder& encoder_;
+    MotionController& motion_;
+    ODriveCAN& odrive_;
+
+    TelemetrySample sample_{};
+    uint32_t lastCollectMs_;
+    uint32_t lastPrintMs_;
+    bool hasSample_;
+
+    LogEntry logBuffer_[LOG_BUFFER_SIZE];
+    size_t logHead_;
+    size_t logCount_;
+    LogLevel minLevel_;
+
+    void collect();
+    void printScheduled();
+    void printLogEntry(const LogEntry& entry);
+    void printOdrive(const char* name, const OdriveSnapshot& snapshot);
+    static bool levelAllowed(LogLevel level, LogLevel minLevel);
+    static const char* levelName(LogLevel level);
+    static const char* modeName(MotionSnapshot::Mode mode);
 };
