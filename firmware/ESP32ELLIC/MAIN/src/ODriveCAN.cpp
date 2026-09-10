@@ -108,7 +108,7 @@ void ODriveCAN::processFrame(uint32_t canId, const uint8_t* data, uint8_t dlc, u
         case CMD_HEARTBEAT:
             // Раздел 10.4: Axis_Error(u32 @0) Axis_State(u8 @4)
             // Motor/Encoder/Controller_Error_Flag(бит @5.0/6.0/7.0) Trajectory_Done_Flag(бит @7.7)
-            if (dlc >= 7) {
+            if (dlc >= 8) {
                 ch.axisError = readU32(&data[0]);
                 ch.axisState = data[4];
                 ch.trajectoryDone = (data[7] & 0x80) != 0;
