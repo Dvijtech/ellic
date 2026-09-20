@@ -5,7 +5,7 @@
 #include "MotionController.h"
 #include "ODriveCAN.h"
 #include "Telemetry.h"
-#include "EllicVRButton.h"   
+// #include "EllicVRButton.h"   
 
 // Раздел 0: main.cpp содержит один экземпляр ODriveCAN, обслуживающий оба
 // логических канала (RIGHT node_id=1, LEFT node_id=2).
@@ -15,7 +15,7 @@ ODriveCAN odriveCAN;
 
 Telemetry telemetry(&encoder, &motionController, &odriveCAN);
 
-EllicVRButton vrButton("ELLIC VR Gamepad", 18);
+// EllicVRButton vrButton("ELLIC VR Gamepad", 18);
 
 uint32_t lastControlMs = 0;
 
@@ -36,7 +36,7 @@ void setup() {
     odriveCAN.setTelemetry(&telemetry);
     odriveCAN.begin();
 
-    vrButton.begin();
+    // vrButton.begin();
     
     // Раздел 10.1/10.2: явная ASCII-конфигурация ODrive из ESP32 не
     // выполняется. При работе по CAN она не предусмотрена в принципе -
@@ -78,5 +78,5 @@ void loop() {
     // Раздел 12: телеметрия - собственные периоды collect()/printScheduled().
     telemetry.update();
 
-    vrButton.update();
+    // vrButton.update();
 }

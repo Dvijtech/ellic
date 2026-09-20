@@ -1,0 +1,15 @@
+# Список конфигурации
+odrivetool backup-config my_configК.yaml 
+
+
+dev0.axis0.motor.config.current_lim=10; 
+dev0.axis0.controller.config.vel_limit=2; 
+dev0.axis0.controller.config.vel_limit_tolerance=1.2; 
+dev0.axis0.controller.config.enable_overspeed_error=False; 
+dev0.axis0.controller.config.vel_integrator_limit=float('inf')
+dev0.axis0.controller.config.enable_gain_scheduling = True;
+dev0.axis0.controller.config.gain_scheduling_width = 5.0
+dev0.axis0.controller.config.vel_gain=0.5;
+
+
+print(f"current_lim={dev0.axis0.motor.config.current_lim}, vel_limit={dev0.axis0.controller.config.vel_limit}, vel_limit_tol={dev0.axis0.controller.config.vel_limit_tolerance}, overspeed_err={dev0.axis0.controller.config.enable_overspeed_error}, vel_int_gain={dev0.axis0.controller.config.vel_integrator_gain}, vel_int_limit={dev0.axis0.controller.config.vel_integrator_limit}")
