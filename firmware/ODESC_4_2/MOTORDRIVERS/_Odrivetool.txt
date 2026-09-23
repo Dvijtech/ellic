@@ -1,0 +1,70 @@
+===== MOTOR =====
+pole_pairs = 7
+motor_type = 0
+current_lim = 5.0
+pre_calibrated = True
+
+===== ENCODER =====
+mode = 1
+cpr = 42
+direction = 1
+hall_polarity = 0
+phase_offset = 67
+phase_offset_float = 0.5071259140968323
+pre_calibrated = True
+
+===== CONTROLLER =====
+control_mode = 1
+input_mode = 1
+vel_limit = 20.0
+
+===== AXIS STARTUP =====
+startup_closed_loop_control = True
+startup_motor_calibration = False
+startup_encoder_offset_calibration = False
+
+===== DC BUS =====
+brake_resistance = 2.0
+dc_max_negative_current = -5.0
+dc_max_positive_current = inf
+
+===== STATUS =====
+motor_calibrated = True
+encoder_ready = True
+
+# Ветка подключения второго мотора по этим параметрам: 
+# https://chatgpt.com/s/t_6a4e8198c8b08191af44dace9df84ff2
+
+print("===== MOTOR =====")
+print("pole_pairs =", dev0.axis0.motor.config.pole_pairs)
+print("motor_type =", dev0.axis0.motor.config.motor_type)
+print("current_lim =", dev0.axis0.motor.config.current_lim)
+print("pre_calibrated =", dev0.axis0.motor.config.pre_calibrated)
+
+print("\n===== ENCODER =====")
+print("mode =", dev0.axis0.encoder.config.mode)
+print("cpr =", dev0.axis0.encoder.config.cpr)
+print("direction =", dev0.axis0.encoder.config.direction)
+print("hall_polarity =", dev0.axis0.encoder.config.hall_polarity)
+print("phase_offset =", dev0.axis0.encoder.config.phase_offset)
+print("phase_offset_float =", dev0.axis0.encoder.config.phase_offset_float)
+print("pre_calibrated =", dev0.axis0.encoder.config.pre_calibrated)
+
+print("\n===== CONTROLLER =====")
+print("control_mode =", dev0.axis0.controller.config.control_mode)
+print("input_mode =", dev0.axis0.controller.config.input_mode)
+print("vel_limit =", dev0.axis0.controller.config.vel_limit)
+
+print("\n===== AXIS STARTUP =====")
+print("startup_closed_loop_control =", dev0.axis0.config.startup_closed_loop_control)
+print("startup_motor_calibration =", dev0.axis0.config.startup_motor_calibration)
+print("startup_encoder_offset_calibration =", dev0.axis0.config.startup_encoder_offset_calibration)
+
+print("\n===== DC BUS =====")
+print("brake_resistance =", dev0.config.brake_resistance)
+print("dc_max_negative_current =", dev0.config.dc_max_negative_current)
+print("dc_max_positive_current =", dev0.config.dc_max_positive_current)
+
+print("\n===== STATUS =====")
+print("motor_calibrated =", dev0.axis0.motor.is_calibrated)
+print("encoder_ready =", dev0.axis0.encoder.is_ready)

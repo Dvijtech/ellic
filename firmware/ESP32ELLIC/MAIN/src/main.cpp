@@ -5,7 +5,13 @@
 #include "MotionController.h"
 #include "ODriveCAN.h"
 #include "Telemetry.h"
-// #include "EllicVRButton.h"   
+#include "BleTelemetry.h"
+// #include "EllicVRButton.h"
+// ВАЖНО: EllicVRButton (BleGamepad) и BleTelemetry - оба поднимают BLE-стек
+// на ESP32. Пока EllicVRButton закомментирован, конфликта нет. Если его
+// снова включат, нельзя просто раскомментировать: два независимых вызова
+// инициализации BLE с высокой вероятностью конфликтуют (один BLE-радио на
+// устройство) - оба модуля тогда нужно свести на один и тот же стек.
 
 // Раздел 0: main.cpp содержит один экземпляр ODriveCAN, обслуживающий оба
 // логических канала (RIGHT node_id=1, LEFT node_id=2).
@@ -14,6 +20,7 @@ MotionController motionController;
 ODriveCAN odriveCAN;
 
 Telemetry telemetry(&encoder, &motionController, &odriveCAN);
+BleTelemetry bleTelemetry;
 
 // EllicVRButton vrButton("ELLIC VR Gamepad", 18);
 
@@ -30,6 +37,9 @@ void setup() {
 
     telemetry.begin(LogLevel::INFO);
 
+    bleTelemetry.begin("ELLIC Telemetry");
+    telemetry.setBleTelemetry(&bleTelemetry);
+
     encoder.begin(&telemetry);
     motionController.begin();
 
@@ -37,7 +47,7 @@ void setup() {
     odriveCAN.begin();
 
     // vrButton.begin();
-    
+
     // Раздел 10.1/10.2: явная ASCII-конфигурация ODrive из ESP32 не
     // выполняется. При работе по CAN она не предусмотрена в принципе -
     // соответствующего метода в ODriveCAN намеренно нет.
@@ -54,6 +64,9 @@ void loop() {
     // Раздел 14.1: приём CAN-кадров и обновление кэша/online-статуса
     // выполняется на каждом проходе loop(), не блокируясь телеметрией.
     odriveCAN.update();
+
+    // Обслуживает переподключения BLE-клиента телеметрии.
+    bleTelemetry.update();
 
     uint32_t now = millis();
     if (now - lastControlMs >= CONTROL_PERIOD_MS) {

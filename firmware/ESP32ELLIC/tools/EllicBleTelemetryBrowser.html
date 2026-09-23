@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ELLIC · Телеметрия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14160f;
+    --panel: #1b1e15;
+    --panel-border: #33372a;
+    --text: #e9e4d3;
+    --muted: #8d9280;
+    --amber: #e3a857;
+    --teal: #6fa89c;
+    --red: #c96a4f;
+    --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #14160f; --panel: #1b1e15; --panel-border: #33372a;
+      --text: #e9e4d3; --muted: #8d9280;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    flex-direction: column;
+    margin-right: auto;
+  }
+  .brand .name {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .brand .sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+  }
+  .dot.connected {
+    background: var(--amber);
+    box-shadow: 0 0 0 0 rgba(227, 168, 87, 0.6);
+    animation: pulse 2s infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dot.connected { animation: none; }
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(227, 168, 87, 0.5); }
+    70%  { box-shadow: 0 0 0 7px rgba(227, 168, 87, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(227, 168, 87, 0); }
+  }
+  button {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 3px;
+    border: 1px solid var(--amber);
+    background: transparent;
+    color: var(--amber);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: var(--amber); color: #14160f; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.secondary {
+    border-color: var(--panel-border);
+    color: var(--muted);
+  }
+  button.secondary:hover:not(:disabled) { background: var(--panel-border); color: var(--text); }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+    gap: 1px;
+    background: var(--panel-border);
+    overflow: hidden;
+  }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; grid-auto-rows: minmax(280px, 1fr); }
+  }
+
+  .console-pane, .dashboard-pane {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .pane-head {
+    padding: 10px 20px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #console {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 20px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #console .line { color: var(--text); }
+  #console .line.log-info { color: var(--teal); }
+  #console .line.log-warning { color: var(--amber); }
+  #console .line.log-error { color: var(--red); }
+  #console .line.sys { color: var(--muted); font-style: italic; }
+  #console .empty { color: var(--muted); }
+
+  .dashboard-pane { overflow-y: auto; padding: 14px 16px; gap: 12px; }
+  .card {
+    border: 1px solid var(--panel-border);
+    border-radius: 3px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .card .card-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .card .row {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 2px 0;
+    gap: 12px;
+  }
+  .card .row .k { color: var(--muted); }
+  .card .row .v { color: var(--text); text-align: right; }
+  .dashboard-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 8px 4px;
+    line-height: 1.6;
+  }
+
+  .unsupported {
+    margin: 40px auto;
+    max-width: 480px;
+    padding: 20px 24px;
+    border: 1px solid var(--panel-border);
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .unsupported strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="name">ELLIC · телеметрия</div>
+    <div class="sub">приём по BLE, тот же состав, что в Serial-мониторе</div>
+  </div>
+  <div class="status">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">не подключено</span>
+  </div>
+  <button id="connectBtn">Подключиться</button>
+  <button id="disconnectBtn" class="secondary" disabled>Отключить</button>
+  <button id="clearBtn" class="secondary">Очистить лог</button>
+</header>
+
+<main id="mainArea">
+  <section class="console-pane">
+    <div class="pane-head"><span>Консоль</span><span id="lineCount">0 строк</span></div>
+    <div id="console"><div class="empty">Ожидание подключения к ELLIC…</div></div>
+  </section>
+  <section class="dashboard-pane">
+    <div class="pane-head" style="border:none; padding-left:4px;">Текущие показания</div>
+    <div id="dashboard"><div class="dashboard-empty">Появятся после первого пакета телеметрии.</div></div>
+  </section>
+</main>
+
+<script>
+const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const CHAR_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+const MAX_CONSOLE_LINES = 600;
+
+let device = null;
+let rxBuffer = '';
+let lineCount = 0;
+const dashboardGroups = {}; // { "ENC": {raw: "...", cont: "..."}, "ODRIVE LEFT": {...}, ... }
+const GROUP_ORDER = [];
+
+const consoleEl = document.getElementById('console');
+const dashboardEl = document.getElementById('dashboard');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const connectBtn = document.getElementById('connectBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
+const clearBtn = document.getElementById('clearBtn');
+const lineCountEl = document.getElementById('lineCount');
+
+function setStatus(connected, label) {
+  statusDot.classList.toggle('connected', connected);
+  statusText.textContent = connected ? ('подключено · ' + (label || 'ELLIC')) : 'не подключено';
+  connectBtn.disabled = connected;
+  disconnectBtn.disabled = !connected;
+}
+
+function appendConsoleLine(text, cssClass) {
+  if (consoleEl.querySelector('.empty')) consoleEl.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'line' + (cssClass ? ' ' + cssClass : '');
+  div.textContent = text;
+  consoleEl.appendChild(div);
+  lineCount++;
+  while (consoleEl.childElementCount > MAX_CONSOLE_LINES) {
+    consoleEl.removeChild(consoleEl.firstChild);
+  }
+  lineCountEl.textContent = lineCount + ' строк';
+  const nearBottom = consoleEl.scrollHeight - consoleEl.scrollTop - consoleEl.clientHeight < 80;
+  if (nearBottom) consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function classifyLine(line) {
+  if (line.startsWith('[WARNING]')) return 'log-warning';
+  if (line.startsWith('[ERROR]') || line.startsWith('[CRITICAL]')) return 'log-error';
+  if (line.startsWith('[INFO]')) return 'log-info';
+  return null;
+}
+
+function parseKeyValues(rest) {
+  const kv = {};
+  const re = /([A-Za-z_]+)=(\S+)/g;
+  let m;
+  while ((m = re.exec(rest)) !== null) kv[m[1]] = m[2];
+  return kv;
+}
+
+function handleLine(line) {
+  if (line.length === 0) return;
+  appendConsoleLine(line, classifyLine(line));
+
+  if (line.startsWith('[')) return; // лог-события в дашборд не попадают
+
+  const firstSpace = line.indexOf(' ');
+  if (firstSpace < 0) return;
+  let group = line.slice(0, firstSpace);
+  let rest = line.slice(firstSpace + 1);
+
+  if (group === 'ODRIVE') {
+    const m = rest.match(/^(\S+):\s*(.*)$/);
+    if (m) { group = 'ODRIVE ' + m[1]; rest = m[2]; }
+  }
+
+  const kv = parseKeyValues(rest);
+  if (Object.keys(kv).length === 0) return;
+
+  if (!(group in dashboardGroups)) GROUP_ORDER.push(group);
+  dashboardGroups[group] = kv;
+  renderDashboard();
+}
+
+function renderDashboard() {
+  if (GROUP_ORDER.length === 0) return;
+  dashboardEl.innerHTML = '';
+  for (const group of GROUP_ORDER) {
+    const kv = dashboardGroups[group];
+    const card = document.createElement('div');
+    card.className = 'card';
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.textContent = group;
+    card.appendChild(title);
+    for (const [k, v] of Object.entries(kv)) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="k">' + k + '</span><span class="v">' + v + '</span>';
+      card.appendChild(row);
+    }
+    dashboardEl.appendChild(card);
+  }
+}
+
+const decoder = new TextDecoder('utf-8');
+function onNotification(event) {
+  const chunk = decoder.decode(event.target.value);
+  rxBuffer += chunk;
+  let idx;
+  while ((idx = rxBuffer.indexOf('\n')) >= 0) {
+    const line = rxBuffer.slice(0, idx).replace(/\r$/, '');
+    rxBuffer = rxBuffer.slice(idx + 1);
+    handleLine(line);
+  }
+}
+
+function onGattDisconnected() {
+  setStatus(false);
+  appendConsoleLine('— соединение разорвано —', 'sys');
+}
+
+async function connect() {
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE_UUID] }],
+      optionalServices: [SERVICE_UUID]
+    });
+    device.addEventListener('gattserverdisconnected', onGattDisconnected);
+
+    appendConsoleLine('— подключение к ' + device.name + '… —', 'sys');
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+    const txChar = await service.getCharacteristic(CHAR_TX_UUID);
+    await txChar.startNotifications();
+    txChar.addEventListener('characteristicvaluechanged', onNotification);
+
+    setStatus(true, device.name);
+    appendConsoleLine('— подключено, ждём телеметрию —', 'sys');
+  } catch (err) {
+    appendConsoleLine('Ошибка подключения: ' + err, 'log-error');
+    setStatus(false);
+  }
+}
+
+function disconnect() {
+  if (device && device.gatt.connected) device.gatt.disconnect();
+}
+
+function clearLog() {
+  consoleEl.innerHTML = '<div class="empty">Лог очищен.</div>';
+  lineCount = 0;
+  lineCountEl.textContent = '0 строк';
+}
+
+connectBtn.addEventListener('click', connect);
+disconnectBtn.addEventListener('click', disconnect);
+clearBtn.addEventListener('click', clearLog);
+
+if (!navigator.bluetooth) {
+  document.getElementById('mainArea').innerHTML =
+    '<div class="unsupported"><strong>Web Bluetooth недоступен в этом браузере.</strong><br><br>' +
+    'Откройте страницу в Chrome или Edge на Windows (последняя версия) и включите системный Bluetooth. ' +
+    'Safari и Firefox Web Bluetooth не поддерживают.</div>';
+  connectBtn.disabled = true;
+}
+</script>
+</body>
+</html>
