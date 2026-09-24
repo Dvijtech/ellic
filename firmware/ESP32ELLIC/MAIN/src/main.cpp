@@ -27,6 +27,9 @@ BleTelemetry bleTelemetry;
 uint32_t lastControlMs = 0;
 
 void setup() {
+    
+    /// WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // ВРЕМЕННО: отключает brownout-детектор
+
     Serial.begin(115200);
 
     Wire.begin(AS5600_SDA_PIN, AS5600_SCL_PIN);
@@ -37,14 +40,16 @@ void setup() {
 
     telemetry.begin(LogLevel::INFO);
 
-    bleTelemetry.begin("ELLIC Telemetry");
-    telemetry.setBleTelemetry(&bleTelemetry);
-
     encoder.begin(&telemetry);
     motionController.begin();
 
     odriveCAN.setTelemetry(&telemetry);
     odriveCAN.begin();
+
+    /// delay(5000); // диагностическая пауза перед стартом BLE    
+    
+    bleTelemetry.begin("ELLIC Telemetry");
+    telemetry.setBleTelemetry(&bleTelemetry);
 
     // vrButton.begin();
 

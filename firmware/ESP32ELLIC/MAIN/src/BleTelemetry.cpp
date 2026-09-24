@@ -52,6 +52,9 @@ BleTelemetry::BleTelemetry()
 
 void BleTelemetry::begin(const char* deviceName) {
     BLEDevice::init(deviceName);
+
+    /// BLEDevice::setPower(ESP_PWR_LVL_N12); // минимальная мощность TX - снижает пиковый ток
+
     BLEDevice::setMTU(247); // запрашиваем увеличенный MTU у клиента, чтобы
                              // строки телеметрии не резались на 20 байт
 
