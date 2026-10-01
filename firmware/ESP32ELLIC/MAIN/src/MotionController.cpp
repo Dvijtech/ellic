@@ -48,7 +48,7 @@ void MotionController::update(float rawAngleDeg, float continuousAngleDeg,
         _valDelta = 0.0f;
         _initialized = true;
     } else {
-        _valDelta = continuousAngleDeg - _previousContinuousAngle;
+        _valDelta = (continuousAngleDeg - _previousContinuousAngle )* ENCODER_SIGN;
         _previousContinuousAngle = continuousAngleDeg;
     }
 

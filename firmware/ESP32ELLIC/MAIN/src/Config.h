@@ -15,8 +15,8 @@
 #define AS5600_RAW_ANGLE_REG 0x0C
 
 // Тормоза
-#define LEFT_BRAKE_PIN 32
-#define RIGHT_BRAKE_PIN 33
+#define LEFT_BRAKE_PIN 32 // второй провод на землю
+#define RIGHT_BRAKE_PIN 33 // второй провод на землю
 // Тормоз нажат при digitalRead(pin) == LOW (см. раздел 4)
 
 // CAN (ESP32 TWAI, транссивер SN65HVD230, раздел 4 / "Вопрос 3")
@@ -32,6 +32,9 @@ static const uint32_t CONTROL_PERIOD_MS      = 300;   // период MotionCont
 static const float    MOTOR_GEAR_RATIO       = 6.4f;  // передаточное число редуктора
 static const float    TURN_ZONE_DEG          = 10.0f; // ширина зоны поворота
 static const float    TURN_STEP              = 1.0f; // шаг противоположного колеса при повороте (оборотов)
+
+static const float    ENCODER_SIGN           = -1.0f; // инверсия направления энкодера (только для NORMAL)
+
 static const float    LEFT_WHEEL_SIGN        = 1.0f;
 static const float    RIGHT_WHEEL_SIGN       = -1.0f;
 
