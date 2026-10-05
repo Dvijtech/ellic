@@ -62,6 +62,13 @@ void ODriveCAN::initChannel(WheelChannel &ch, uint8_t nodeId, const char* label)
     ch.rxCount = 0;
     ch.rxFailCount = 0;
     ch.diagnosticsTimestampMs = 0;
+
+    ch.txFailCount = 0;
+    ch.offlineCount = 0;
+    ch.axisErrCount = 0;
+    ch.motorErrCount = 0;
+    ch.encoderErrCount = 0;
+    ch.controllerErrCount = 0;
 }
 
 void ODriveCAN::setTelemetry(Telemetry* telemetry) {
@@ -94,22 +101,20 @@ void ODriveCAN::processFrame(uint32_t canId, const uint8_t* data, uint8_t dlc, u
     }
     WheelChannel &ch = *chPtr;
 
-    bool wasOffline = !ch.online;
     ch.everReceivedFrame = true;
     ch.lastFrameMs = nowMs;
     ch.online = true;
     ch.rxCount++;
-
-    if (wasOffline && _telemetry != nullptr) {
-        _telemetry->log(LogLevel::INFO, ch.label, "ODrive CAN: online");
-    }
 
     switch (cmdId) {
         case CMD_HEARTBEAT:
             // Раздел 10.4: Axis_Error(u32 @0) Axis_State(u8 @4)
             // Motor/Encoder/Controller_Error_Flag(бит @5.0/6.0/7.0) Trajectory_Done_Flag(бит @7.7)
             if (dlc >= 8) {
-                ch.axisError = readU32(&data[0]);
+                uint32_t v = readU32(&data[0]);
+                if (v != 0 && v != ch.axisError) ch.axisErrCount++;
+                ch.axisError = v;
+
                 ch.axisState = data[4];
                 ch.trajectoryDone = (data[7] & 0x80) != 0;
                 ch.diagnosticsTimestampMs = nowMs;
@@ -119,14 +124,20 @@ void ODriveCAN::processFrame(uint32_t canId, const uint8_t* data, uint8_t dlc, u
         case CMD_GET_MOTOR_ERROR:
             // Внимание: у fw 0.5.6 это поле 64-битное (см. отчёт после кода).
             if (dlc >= 8) {
-                ch.motorError = readU64(&data[0]);
+                uint64_t v = readU64(&data[0]);
+                if (v != 0 && v != ch.motorError) ch.motorErrCount++;
+                ch.motorError = v;
+
                 ch.diagnosticsTimestampMs = nowMs;
             }
             break;
 
         case CMD_GET_ENCODER_ERROR:
             if (dlc >= 4) {
-                ch.encoderError = readU32(&data[0]);
+                uint32_t v = readU32(&data[0]);
+                if (v != 0 && v != ch.encoderError) ch.encoderErrCount++;
+                ch.encoderError = v;
+
                 ch.diagnosticsTimestampMs = nowMs;
             }
             break;
@@ -160,7 +171,10 @@ void ODriveCAN::processFrame(uint32_t canId, const uint8_t* data, uint8_t dlc, u
 
         case CMD_GET_CONTROLLER_ERROR:
             if (dlc >= 4) {
-                ch.controllerError = readU32(&data[0]);
+                uint32_t v = readU32(&data[0]);
+                if (v != 0 && v != ch.controllerError) ch.controllerErrCount++;
+                ch.controllerError = v;
+
                 ch.diagnosticsTimestampMs = nowMs;
             }
             break;
@@ -179,9 +193,7 @@ void ODriveCAN::refreshOnlineState(uint32_t nowMs) {
         if (ch.online && ch.everReceivedFrame &&
             (nowMs - ch.lastFrameMs) > CAN_NODE_STALE_MS) {
             ch.online = false;
-            if (_telemetry != nullptr) {
-                _telemetry->log(LogLevel::WARNING, ch.label, "ODrive CAN: offline (stale)");
-            }
+            ch.offlineCount++;
         }
     }
 }
@@ -223,9 +235,8 @@ bool ODriveCAN::moveWheelInternal(WheelChannel &ch, float delta) {
         return true;
     }
 
-    if (_telemetry != nullptr) {
-        _telemetry->log(LogLevel::WARNING, ch.label, "ODrive CAN: Set Input Pos TX failed");
-    }
+    ch.txFailCount++;
+
     return false;
 }
 
@@ -254,6 +265,14 @@ OdriveSnapshot ODriveCAN::snapshotFrom(const WheelChannel &ch) const {
     s.rxCount = ch.rxCount;
     s.rxFailCount = ch.rxFailCount;
     s.diagnosticsTimestampMs = ch.diagnosticsTimestampMs;
+
+    s.txFailCount = ch.txFailCount;
+    s.offlineCount = ch.offlineCount;
+    s.axisErrCount = ch.axisErrCount;
+    s.motorErrCount = ch.motorErrCount;
+    s.encoderErrCount = ch.encoderErrCount;
+    s.controllerErrCount = ch.controllerErrCount;
+
     return s;
 }
 

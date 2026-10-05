@@ -4,397 +4,1041 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ELLIC · Телеметрия</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #14160f;
-    --panel: #1b1e15;
-    --panel-border: #33372a;
+    --band: #1b1e15;
+    --border: #33372a;
     --text: #e9e4d3;
     --muted: #8d9280;
     --amber: #e3a857;
     --teal: #6fa89c;
     --red: #c96a4f;
-    --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      --bg: #14160f; --panel: #1b1e15; --panel-border: #33372a;
-      --text: #e9e4d3; --muted: #8d9280;
-    }
-  }
   * { box-sizing: border-box; }
-  html, body {
-    height: 100%;
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-ui);
-  }
-  body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-  }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
+  body { display: flex; flex-direction: column; min-height: 100%; }
 
   header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 18px 24px;
-    border-bottom: 1px solid var(--panel-border);
-    padding-top: calc(18px + env(safe-area-inset-top, 0px));
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
   }
-  .brand {
-    display: flex;
-    flex-direction: column;
-    margin-right: auto;
+  .brand { font-family: var(--font-mono); font-size: 17px; font-weight: 700; letter-spacing: .02em; margin-right: 8px; }
+  .status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-right: auto; flex-wrap: wrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+  .dot.on { background: var(--amber); }
+  button, select {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+    padding: 7px 13px; border-radius: 3px; border: 1px solid var(--amber);
+    background: transparent; color: var(--amber); cursor: pointer;
+    transition: background .15s ease, color .15s ease;
   }
-  .brand .name {
-    font-family: var(--font-mono);
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
-  .brand .sub {
-    font-size: 13px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--red);
-    flex-shrink: 0;
-  }
-  .dot.connected {
-    background: var(--amber);
-    box-shadow: 0 0 0 0 rgba(227, 168, 87, 0.6);
-    animation: pulse 2s infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .dot.connected { animation: none; }
-  }
-  @keyframes pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(227, 168, 87, 0.5); }
-    70%  { box-shadow: 0 0 0 7px rgba(227, 168, 87, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(227, 168, 87, 0); }
-  }
-  button {
-    font-family: var(--font-ui);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 9px 18px;
-    border-radius: 3px;
-    border: 1px solid var(--amber);
-    background: transparent;
-    color: var(--amber);
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
+  select { font-weight: 500; padding: 7px 8px; }
+  select option { background: var(--bg); color: var(--text); }
   button:hover:not(:disabled) { background: var(--amber); color: #14160f; }
-  button:disabled { opacity: 0.35; cursor: not-allowed; }
-  button.secondary {
-    border-color: var(--panel-border);
-    color: var(--muted);
-  }
-  button.secondary:hover:not(:disabled) { background: var(--panel-border); color: var(--text); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.secondary { border-color: var(--border); color: var(--muted); }
+  button.secondary:hover:not(:disabled) { background: var(--border); color: var(--text); }
+  button.active { background: var(--amber); color: #14160f; }
 
-  main {
-    flex: 1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
-    gap: 1px;
-    background: var(--panel-border);
-    overflow: hidden;
-  }
-  @media (max-width: 860px) {
-    main { grid-template-columns: 1fr; grid-auto-rows: minmax(280px, 1fr); }
-  }
-
-  .console-pane, .dashboard-pane {
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .pane-head {
-    padding: 10px 20px;
-    font-size: 12px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--panel-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  #console {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px 20px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  #console .line { color: var(--text); }
-  #console .line.log-info { color: var(--teal); }
-  #console .line.log-warning { color: var(--amber); }
-  #console .line.log-error { color: var(--red); }
-  #console .line.sys { color: var(--muted); font-style: italic; }
-  #console .empty { color: var(--muted); }
-
-  .dashboard-pane { overflow-y: auto; padding: 14px 16px; gap: 12px; }
-  .card {
-    border: 1px solid var(--panel-border);
-    border-radius: 3px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-  }
-  .card .card-title {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--amber);
-    margin-bottom: 8px;
-  }
-  .card .row {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    padding: 2px 0;
-    gap: 12px;
-  }
-  .card .row .k { color: var(--muted); }
-  .card .row .v { color: var(--text); text-align: right; }
-  .dashboard-empty {
-    color: var(--muted);
-    font-size: 13px;
-    padding: 8px 4px;
-    line-height: 1.6;
-  }
-
-  .unsupported {
-    margin: 40px auto;
-    max-width: 480px;
-    padding: 20px 24px;
-    border: 1px solid var(--panel-border);
-    border-radius: 3px;
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-  .unsupported strong { color: var(--text); }
+  #panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+  #axis { position: sticky; top: 0; z-index: 2; display: block; }
+  #main { display: block; touch-action: pan-y; user-select: none; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">
-    <div class="name">ELLIC · телеметрия</div>
-    <div class="sub">приём по BLE, тот же состав, что в Serial-мониторе</div>
-  </div>
+  <div class="brand">ELLIC · телеметрия</div>
   <div class="status">
     <span class="dot" id="statusDot"></span>
     <span id="statusText">не подключено</span>
+    <span id="stats"></span>
+    <span id="note"></span>
   </div>
   <button id="connectBtn">Подключиться</button>
   <button id="disconnectBtn" class="secondary" disabled>Отключить</button>
-  <button id="clearBtn" class="secondary">Очистить лог</button>
+  <button id="demoBtn" class="secondary">Демо</button>
+  <select id="winSel" title="Окно по времени">
+    <option value="30">30 с</option>
+    <option value="60" selected>1 мин</option>
+    <option value="300">5 мин</option>
+    <option value="0">всё</option>
+  </select>
+  <button id="pauseBtn" class="secondary">Пауза</button>
+  <button id="clearBtn" class="secondary">Очистить</button>
+  <button id="orderBtn" class="secondary" title="Вернуть исходный порядок строк">Порядок строк</button>
+  <button id="xlsxBtn">Скачать Excel</button>
+  <button id="rawBtn" class="secondary">Сохранить сырой лог</button>
 </header>
 
-<main id="mainArea">
-  <section class="console-pane">
-    <div class="pane-head"><span>Консоль</span><span id="lineCount">0 строк</span></div>
-    <div id="console"><div class="empty">Ожидание подключения к ELLIC…</div></div>
-  </section>
-  <section class="dashboard-pane">
-    <div class="pane-head" style="border:none; padding-left:4px;">Текущие показания</div>
-    <div id="dashboard"><div class="dashboard-empty">Появятся после первого пакета телеметрии.</div></div>
-  </section>
-</main>
+<div id="panel">
+  <canvas id="axis"></canvas>
+  <canvas id="main"></canvas>
+</div>
 
 <script>
-const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const CHAR_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-const MAX_CONSOLE_LINES = 600;
+// <LOGIC>
+// ==================== Протокол v2 (ELLIC_telemetry_TZ.md) ====================
+const PERIOD_MS = 200;     // период пакетов прошивки (для склейки после перезагрузки)
+const MAX_COLS = 16000;    // столбцов в одном xlsx (лимит Excel 16384)
 
-let device = null;
-let rxBuffer = '';
-let lineCount = 0;
-const dashboardGroups = {}; // { "ENC": {raw: "...", cont: "..."}, "ODRIVE LEFT": {...}, ... }
-const GROUP_ORDER = [];
-
-const consoleEl = document.getElementById('console');
-const dashboardEl = document.getElementById('dashboard');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
-const connectBtn = document.getElementById('connectBtn');
-const disconnectBtn = document.getElementById('disconnectBtn');
-const clearBtn = document.getElementById('clearBtn');
-const lineCountEl = document.getElementById('lineCount');
-
-function setStatus(connected, label) {
-  statusDot.classList.toggle('connected', connected);
-  statusText.textContent = connected ? ('подключено · ' + (label || 'ELLIC')) : 'не подключено';
-  connectBtn.disabled = connected;
-  disconnectBtn.disabled = !connected;
+const VARS = [];           // порядок = порядок строк в Excel
+const VAR_BY_ID = {};
+function def(id, name, group, kind, extra) {
+  const v = Object.assign({ id, name, group, kind }, extra || {});
+  VARS.push(v); VAR_BY_ID[id] = v;
 }
+const G_SHAFT = 'Вал и движение', G_L = 'Левое колесо', G_R = 'Правое колесо', G_E = 'Ошибки';
 
-function appendConsoleLine(text, cssClass) {
-  if (consoleEl.querySelector('.empty')) consoleEl.innerHTML = '';
-  const div = document.createElement('div');
-  div.className = 'line' + (cssClass ? ' ' + cssClass : '');
-  div.textContent = text;
-  consoleEl.appendChild(div);
-  lineCount++;
-  while (consoleEl.childElementCount > MAX_CONSOLE_LINES) {
-    consoleEl.removeChild(consoleEl.firstChild);
+// kind: num - линия; enum/bin/err/ok - статусы (дорожка из точек); cnt - ошибки (событий в пакете)
+def('raw',      'raw, °',            G_SHAFT, 'num');
+def('cont',     'cont, °',           G_SHAFT, 'num');
+def('delta',    'delta, °',          G_SHAFT, 'num');
+def('valDelta', 'valDelta, °',       G_SHAFT, 'num');
+def('lwd',      'leftWheelDelta',    G_SHAFT, 'num');
+def('rwd',      'rightWheelDelta',   G_SHAFT, 'num');
+def('mode',     'mode',              G_SHAFT, 'enum', { max: 2 });
+def('brakeL',   'тормоз L',          G_SHAFT, 'bin');
+def('brakeR',   'тормоз R',          G_SHAFT, 'bin');
+def('turn',     'TURN_ZONE',         G_SHAFT, 'bin');
+
+function defWheel(s, group) {
+  def(s + '_iq',   s + ' iq, А',        group, 'num');
+  def(s + '_vel',  s + ' vel, об/с',    group, 'num');
+  def(s + '_vbus', s + ' vbus, В',      group, 'num');
+  def(s + '_ibus', s + ' ibus, А',      group, 'num');
+  def(s + '_tx',   s + ' tx, кадров',   group, 'num', { int: true });
+  def(s + '_rx',   s + ' rx, кадров',   group, 'num', { int: true });
+  def(s + '_online',   s + ' online',    group, 'ok');
+  def(s + '_state',    s + ' state',     group, 'enum', { max: 13 });
+  def(s + '_traj',     s + ' traj',      group, 'bin');
+  def(s + '_axisErr',  s + ' axisErr',   group, 'err', { hex: true });
+  def(s + '_motorErr', s + ' motorErr',  group, 'err', { hex: true });
+  def(s + '_encErr',   s + ' encErr',    group, 'err', { hex: true });
+  def(s + '_ctrlErr',  s + ' ctrlErr',   group, 'err', { hex: true });
+}
+defWheel('L', G_L);
+defWheel('R', G_R);
+
+// Порядок полей записи E (после type,ts)
+const E_FIELDS = [
+  ['e_as',    'ERR AS5600'],
+  ['e_Ltx',   'ERR L txFail'],  ['e_Rtx',   'ERR R txFail'],
+  ['e_Lstale','ERR L stale'],   ['e_Rstale','ERR R stale'],
+  ['e_Loff',  'ERR L offline'], ['e_Roff',  'ERR R offline'],
+  ['e_Laxis', 'ERR L axis'],    ['e_Raxis', 'ERR R axis'],
+  ['e_Lmot',  'ERR L motor'],   ['e_Rmot',  'ERR R motor'],
+  ['e_Lenc',  'ERR L encoder'], ['e_Renc',  'ERR R encoder'],
+  ['e_Lctrl', 'ERR L ctrl'],    ['e_Rctrl', 'ERR R ctrl'],
+];
+for (const [id, name] of E_FIELDS) def(id, name, G_E, 'cnt', { int: true });
+
+const ERR_CHARTS = [
+  { title: 'вал и CAN', ids: ['e_as', 'e_Ltx', 'e_Rtx', 'e_Lstale', 'e_Rstale', 'e_Loff', 'e_Roff'],
+    names: ['AS5600', 'L txFail', 'R txFail', 'L stale', 'R stale', 'L offline', 'R offline'] },
+  { title: 'ODrive левый', ids: ['e_Laxis', 'e_Lmot', 'e_Lenc', 'e_Lctrl'],
+    names: ['axis', 'motor', 'encoder', 'ctrl'] },
+  { title: 'ODrive правый', ids: ['e_Raxis', 'e_Rmot', 'e_Renc', 'e_Rctrl'],
+    names: ['axis', 'motor', 'encoder', 'ctrl'] },
+];
+
+// ==================== Разбор строк ====================
+function num(s) { return (s === undefined || s === '') ? NaN : Number(s); }
+const HEX_RE = /^[0-9A-Fa-f]+$/;
+
+function parseRecord(line) {
+  const f = line.split(',');
+  const type = f[0];
+  const ts = num(f[1]);
+  if (!Number.isFinite(ts)) return null;
+  const vals = {};
+
+  if (type === 'M') {
+    // M,ts,raw,cont,delta,valDelta,mode,flags,leftWheelDelta,rightWheelDelta
+    if (f.length !== 10) return null;
+    const n = f.slice(2).map(num);
+    if (n.some(x => !Number.isFinite(x))) return null;
+    vals.raw = n[0]; vals.cont = n[1]; vals.delta = n[2]; vals.valDelta = n[3];
+    vals.mode = n[4];
+    const fl = n[5] | 0;
+    vals.brakeL = (fl & 1) ? 1 : 0;
+    vals.brakeR = (fl & 2) ? 1 : 0;
+    vals.turn   = (fl & 4) ? 1 : 0;
+    vals.lwd = n[6]; vals.rwd = n[7];
+  } else if (type === 'L' || type === 'R') {
+    // L,ts,online,state,traj,iq,vel,vbus,ibus,axisErr,motorErr,encErr,ctrlErr,tx,rx
+    if (f.length !== 15) return null;
+    const idx = [2, 3, 4, 5, 6, 7, 8, 13, 14];
+    if (idx.some(i => !Number.isFinite(num(f[i])))) return null;
+    for (let i = 9; i <= 12; i++) if (!HEX_RE.test(f[i])) return null;
+    const s = type;
+    vals[s + '_online'] = num(f[2]);
+    vals[s + '_state']  = num(f[3]);
+    vals[s + '_traj']   = num(f[4]);
+    vals[s + '_iq']     = num(f[5]);
+    vals[s + '_vel']    = num(f[6]);
+    vals[s + '_vbus']   = num(f[7]);
+    vals[s + '_ibus']   = num(f[8]);
+    vals[s + '_axisErr']  = f[9].toUpperCase();
+    vals[s + '_motorErr'] = f[10].toUpperCase();
+    vals[s + '_encErr']   = f[11].toUpperCase();
+    vals[s + '_ctrlErr']  = f[12].toUpperCase();
+    vals[s + '_tx'] = num(f[13]);
+    vals[s + '_rx'] = num(f[14]);
+  } else if (type === 'E') {
+    // E,ts + 15 счётчиков
+    if (f.length !== 2 + E_FIELDS.length) return null;
+    for (let i = 0; i < E_FIELDS.length; i++) {
+      const x = num(f[2 + i]);
+      if (!Number.isFinite(x)) return null;
+      vals[E_FIELDS[i][0]] = x;
+    }
+  } else {
+    return null;
   }
-  lineCountEl.textContent = lineCount + ' строк';
-  const nearBottom = consoleEl.scrollHeight - consoleEl.scrollTop - consoleEl.clientHeight < 80;
-  if (nearBottom) consoleEl.scrollTop = consoleEl.scrollHeight;
+  return { type, ts, vals };
 }
 
-function classifyLine(line) {
-  if (line.startsWith('[WARNING]')) return 'log-warning';
-  if (line.startsWith('[ERROR]') || line.startsWith('[CRITICAL]')) return 'log-error';
-  if (line.startsWith('[INFO]')) return 'log-info';
+// ==================== Хранилище ====================
+// cols: один элемент на пакет (= столбец Excel): { ts, t, v:{id:значение} }
+// Записи M/L/R/E с одинаковым ts попадают в один столбец.
+const store = {};
+function resetStore() {
+  store.cols = [];
+  store.raw = [];
+  store.latest = {};
+  store.offset = 0;
+  store.lastRawTs = null;
+  store.lastEff = null;
+  store.t0 = null;
+  store.bad = 0;
+  store.partStart = 0;
+  store.partIndex = 1;
+  store.startWall = null;
+}
+resetStore();
+
+// Возвращает true, если принята валидная запись.
+function feedLine(line) {
+  line = line.trim();
+  if (!line) return false;
+  const rec = parseRecord(line);
+  if (!rec) { store.bad++; return false; }
+  store.raw.push(line);
+
+  // Перезагрузка ESP32: ts пошёл назад - продолжаем ось времени без разрыва.
+  if (store.lastRawTs !== null && rec.ts < store.lastRawTs) {
+    store.offset = store.lastEff + PERIOD_MS - rec.ts;
+  }
+  store.lastRawTs = rec.ts;
+  const eff = rec.ts + store.offset;
+  store.lastEff = eff;
+  if (store.t0 === null) { store.t0 = eff; store.startWall = new Date(); }
+
+  let col = store.cols[store.cols.length - 1];
+  if (!col || col.ts !== eff) {
+    col = { ts: eff, t: (eff - store.t0) / 1000, v: {} };
+    store.cols.push(col);
+  }
+  Object.assign(col.v, rec.vals);
+  Object.assign(store.latest, rec.vals);
+  return true;
+}
+
+// ==================== Excel (.xlsx), без библиотек ====================
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function deflateRaw(data) {
+  if (typeof CompressionStream === 'undefined') return null;
+  try {
+    const stream = new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  } catch (e) { return null; }
+}
+async function buildZip(files) {
+  const enc = new TextEncoder();
+  const chunks = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const nameBytes = enc.encode(f.name);
+    const crc = crc32(f.data);
+    let comp = await deflateRaw(f.data), method = 8;
+    if (!comp || comp.length >= f.data.length) { comp = f.data; method = 0; }
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true);
+    lh.setUint16(4, 20, true);
+    lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, method, true);
+    lh.setUint16(10, 0, true);
+    lh.setUint16(12, 0x21, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, comp.length, true);
+    lh.setUint32(22, f.data.length, true);
+    lh.setUint16(26, nameBytes.length, true);
+    lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), nameBytes, comp);
+    central.push({ nameBytes, crc, csize: comp.length, usize: f.data.length, method, offset });
+    offset += 30 + nameBytes.length + comp.length;
+  }
+  const cdStart = offset;
+  for (const c of central) {
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true);
+    ch.setUint16(4, 20, true);
+    ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, c.method, true);
+    ch.setUint16(12, 0, true);
+    ch.setUint16(14, 0x21, true);
+    ch.setUint32(16, c.crc, true);
+    ch.setUint32(20, c.csize, true);
+    ch.setUint32(24, c.usize, true);
+    ch.setUint16(28, c.nameBytes.length, true);
+    ch.setUint16(30, 0, true);
+    ch.setUint16(32, 0, true);
+    ch.setUint16(34, 0, true);
+    ch.setUint16(36, 0, true);
+    ch.setUint32(38, 0, true);
+    ch.setUint32(42, c.offset, true);
+    chunks.push(new Uint8Array(ch.buffer), c.nameBytes);
+    offset += 46 + c.nameBytes.length;
+  }
+  const cdSize = offset - cdStart;
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(4, 0, true);
+  end.setUint16(6, 0, true);
+  end.setUint16(8, central.length, true);
+  end.setUint16(10, central.length, true);
+  end.setUint32(12, cdSize, true);
+  end.setUint32(16, cdStart, true);
+  end.setUint16(20, 0, true);
+  chunks.push(new Uint8Array(end.buffer));
+
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+
+function colLetter(n) { // 1 -> A
+  let s = '';
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+function xmlEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Лист: строка 1 - время (с) от начала записи; дальше по строке на переменную,
+// порядок = порядок VARS (вал/движение, левое, правое, ошибки внизу).
+function buildSheetXml(cols) {
+  const nCols = cols.length + 1;
+  const nRows = VARS.length + 1;
+  const parts = [];
+  parts.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
+  parts.push('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">');
+  parts.push('<dimension ref="A1:' + colLetter(nCols) + nRows + '"/>');
+  parts.push('<sheetViews><sheetView workbookViewId="0"><pane xSplit="1" ySplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/></sheetView></sheetViews>');
+  parts.push('<cols><col min="1" max="1" width="20" customWidth="1"/></cols>');
+  parts.push('<sheetData>');
+
+  // строка 1
+  let row = ['<row r="1"><c r="A1" t="inlineStr"><is><t>t, с</t></is></c>'];
+  for (let j = 0; j < cols.length; j++) {
+    row.push('<c r="' + colLetter(j + 2) + '1"><v>' + (Math.round(cols[j].t * 1000) / 1000) + '</v></c>');
+  }
+  row.push('</row>');
+  parts.push(row.join(''));
+
+  for (let i = 0; i < VARS.length; i++) {
+    const v = VARS[i];
+    const r = i + 2;
+    row = ['<row r="' + r + '"><c r="A' + r + '" t="inlineStr"><is><t>' + xmlEsc(v.name) + '</t></is></c>'];
+    for (let j = 0; j < cols.length; j++) {
+      const x = cols[j].v[v.id];
+      if (x === undefined) continue;
+      const ref = colLetter(j + 2) + r;
+      if (typeof x === 'string') row.push('<c r="' + ref + '" t="inlineStr"><is><t>' + xmlEsc(x) + '</t></is></c>');
+      else row.push('<c r="' + ref + '"><v>' + x + '</v></c>');
+    }
+    row.push('</row>');
+    parts.push(row.join(''));
+  }
+  parts.push('</sheetData></worksheet>');
+  return parts.join('');
+}
+
+async function buildXlsx(cols) {
+  const enc = new TextEncoder();
+  const files = [
+    { name: '[Content_Types].xml', data: enc.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '</Types>') },
+    { name: '_rels/.rels', data: enc.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>') },
+    { name: 'xl/workbook.xml', data: enc.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<sheets><sheet name="Данные" sheetId="1" r:id="rId1"/></sheets></workbook>') },
+    { name: 'xl/_rels/workbook.xml.rels', data: enc.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      '</Relationships>') },
+    { name: 'xl/worksheets/sheet1.xml', data: enc.encode(buildSheetXml(cols)) },
+  ];
+  return buildZip(files);
+}
+
+// ==================== Демо-генератор (без железа) ====================
+// Выдаёт строки ровно в формате прошивки.
+function makeDemo() {
+  let ts = 12000, k = 0, ang = 40;
+  let cont = 0, lastR = null;
+  const hex = x => x.toString(16).toUpperCase();
+  return function tick() {
+    k++; ts += PERIOD_MS;
+    const speed = 20 + 18 * Math.sin(k / 35);
+    ang = (ang + speed) % 360; cont += speed;
+    const bl = (k % 160) > 120, br = (k % 270) > 215;
+    const turnZone = (ang < 10 || ang > 350 || Math.abs(ang - 180) <= 10);
+    let mode = 0;
+    if (bl && br) mode = 1; else if (bl || br) mode = turnZone ? 2 : 1;
+    const valDelta = speed * 1.5;
+    let lw = 0, rw = 0;
+    if (mode === 0) { lw = valDelta * 6.4 / 360; rw = -lw; }
+    else if (mode === 2) { if (bl) rw = -1.0; else lw = 1.0; }
+    const flags = (bl ? 1 : 0) | (br ? 2 : 0) | (turnZone ? 4 : 0);
+    const lines = [];
+    lines.push(['M', ts, ang.toFixed(1), cont.toFixed(1), speed.toFixed(2), valDelta.toFixed(2),
+                mode, flags, lw.toFixed(3), rw.toFixed(3)].join(','));
+
+    const rOff = k >= 300 && k < 316;
+    const axisErr = (k >= 180 && k < 200) ? '40' : '0';
+    const L = [ 'L', ts, 1, 8, mode === 1 ? 1 : 0,
+      (1.8 * Math.sin(k / 9) + (Math.random() - .5) * .2).toFixed(2),
+      (speed * 6.4 / 360 * 3).toFixed(3),
+      (24 + (Math.random() - .5) * .2).toFixed(2),
+      (0.6 + 0.3 * Math.sin(k / 9)).toFixed(2),
+      axisErr, '0', '0', '0', (k % 3) ? 1 : 0, 14 ];
+    lines.push(L.join(','));
+    let R;
+    if (rOff && lastR) { R = lastR.slice(); R[0] = 'R'; R[1] = ts; R[2] = 0; R[13] = 0; R[14] = 0; }
+    else {
+      R = [ 'R', ts, 1, 8, mode === 1 ? 1 : 0,
+        (-1.6 * Math.sin(k / 9) + (Math.random() - .5) * .2).toFixed(2),
+        (-speed * 6.4 / 360 * 3).toFixed(3),
+        (24 + (Math.random() - .5) * .2).toFixed(2),
+        (0.5 + 0.3 * Math.sin(k / 9)).toFixed(2),
+        '0', '0', '0', '0', (k % 3) ? 1 : 0, 14 ];
+      lastR = R;
+    }
+    lines.push(R.join(','));
+
+    const e = {
+      as: (k % 97 === 0 ? 1 : 0) + (k === 55 ? 2 : 0),
+      Ltx: k % 211 === 0 ? 1 : 0, Rtx: 0,
+      Lstale: 0, Rstale: rOff ? 1 : 0,
+      Loff: 0, Roff: k === 300 ? 1 : 0,
+      Laxis: k === 180 ? 1 : 0, Raxis: 0,
+      Lmot: 0, Rmot: 0, Lenc: 0, Renc: 0, Lctrl: 0, Rctrl: 0,
+    };
+    lines.push(['E', ts, e.as, e.Ltx, e.Rtx, e.Lstale, e.Rstale, e.Loff, e.Roff,
+                e.Laxis, e.Raxis, e.Lmot, e.Rmot, e.Lenc, e.Renc, e.Lctrl, e.Rctrl].join(','));
+    return lines;
+  };
+}
+// </LOGIC>
+
+// ==================== Интерфейс ====================
+const $ = id => document.getElementById(id);
+const panel = $('panel'), axisCv = $('axis'), mainCv = $('main');
+const actx = axisCv.getContext('2d'), ctx = mainCv.getContext('2d');
+const css = getComputedStyle(document.documentElement);
+const C = {
+  bg: css.getPropertyValue('--bg').trim(), band: css.getPropertyValue('--band').trim(),
+  border: css.getPropertyValue('--border').trim(), text: css.getPropertyValue('--text').trim(),
+  muted: css.getPropertyValue('--muted').trim(), amber: css.getPropertyValue('--amber').trim(),
+  teal: css.getPropertyValue('--teal').trim(), red: css.getPropertyValue('--red').trim(),
+  mono: css.getPropertyValue('--font-mono').trim(), ui: css.getPropertyValue('--font-ui').trim(),
+};
+const SERIES_COLORS = ['#e3a857', '#6fa89c', '#c96a4f', '#9aa6d8', '#c9c05a', '#b987c9', '#7ec96a'];
+
+const LEFT = 170, RIGHT = 96, AXIS_H = 26;
+const H_GROUP = 24, H_LINE = 54, H_LANE = 26;
+
+const ITEMS = {}, DEFAULT_ORDER = [];
+function addItem(it) { ITEMS[it.key] = it; DEFAULT_ORDER.push(it.key); }
+for (const g of [G_SHAFT, G_L, G_R]) {
+  addItem({ key: 'g:' + g, type: 'group', title: g, h: H_GROUP });
+  for (const v of VARS.filter(v => v.group === g && v.kind === 'num')) addItem({ key: v.id, type: 'line', v, h: H_LINE });
+  for (const v of VARS.filter(v => v.group === g && v.kind !== 'num')) addItem({ key: v.id, type: 'lane', v, h: H_LANE });
+}
+addItem({ key: 'g:err', type: 'group', title: 'Ошибки · событий в пакете', h: H_GROUP });
+for (const c of ERR_CHARTS) addItem({ key: 'err:' + c.title, type: 'errs', chart: c, h: Math.max(72, 24 + c.ids.length * 14) });
+
+// Порядок строк (меняется перетаскиванием за левый край, запоминается в браузере).
+const ORDER_KEY = 'ellic.rowOrder.v1';
+function loadOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
+    if (Array.isArray(saved)) {
+      const seen = new Set(), out = [];
+      for (const k of saved) if (ITEMS[k] && !seen.has(k)) { seen.add(k); out.push(k); }
+      for (const k of DEFAULT_ORDER) if (!seen.has(k)) out.push(k);
+      return out;
+    }
+  } catch (e) {}
+  return DEFAULT_ORDER.slice();
+}
+function saveOrder() { try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch (e) {} }
+let order = loadOrder();
+
+// Раскладка: если идёт перетаскивание, на месте target оставляется зазор.
+function layoutOf(ord, dragKey, target) {
+  const list = []; let y = 0, gapY = 0;
+  const others = dragKey ? ord.filter(k => k !== dragKey) : ord;
+  others.forEach((k, i) => {
+    if (dragKey && i === target) { gapY = y; y += ITEMS[dragKey].h; }
+    list.push({ it: ITEMS[k], y }); y += ITEMS[k].h;
+  });
+  if (dragKey && target >= others.length) { gapY = y; y += ITEMS[dragKey].h; }
+  return { list, total: y + 8, gapY };
+}
+
+// ---- состояние вида
+let win = 60, paused = false, pausedEnd = 0;
+let hoverX = null;
+let pending = false;
+let drag = null, curLayout = null, lastClientY = 0, dragTimer = null;
+
+function markDirty() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; draw(); });
+}
+
+function viewRange() {
+  const n = store.cols.length;
+  const lastT = n ? store.cols[n - 1].t : 0;
+  let end = paused ? pausedEnd : lastT;
+  let start;
+  if (win > 0) {
+    if (end < win) { start = 0; end = win; } else { start = end - win; }
+  } else {
+    start = 0; end = Math.max(end, 10);
+  }
+  return [start, end];
+}
+
+function lowerBound(t) { // первый индекс с cols[i].t >= t
+  const c = store.cols; let lo = 0, hi = c.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (c[m].t < t) lo = m + 1; else hi = m; }
+  return lo;
+}
+
+function fmtVal(v, int) {
+  if (v === undefined || v === null) return '—';
+  if (typeof v === 'string') return v;
+  if (!Number.isFinite(v)) return '—';
+  if (int) return String(Math.round(v));
+  const a = Math.abs(v);
+  if (a >= 1000) return v.toFixed(0);
+  if (a >= 100) return v.toFixed(1);
+  return v.toFixed(2);
+}
+function fmtScale(v) {
+  const a = Math.abs(v);
+  if (a >= 1000) return v.toFixed(0);
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+function niceStep(range, plotW) {
+  const raw = range / Math.max(1, plotW / 90);
+  const steps = [0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+  return steps.find(s => s >= raw) || 7200;
+}
+function fmtT(t, step) {
+  if (t >= 120 || step >= 60) { const m = Math.floor(t / 60), s = Math.round(t % 60); return m + ':' + String(s).padStart(2, '0'); }
+  return step < 1 ? t.toFixed(1) : String(Math.round(t * 10) / 10);
+}
+
+function setupCanvas(cv, cx, cssW, cssH) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(cssW * dpr), h = Math.round(cssH * dpr);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  cv.style.width = cssW + 'px'; cv.style.height = cssH + 'px';
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function levelOf(v, x) {
+  if (v.kind === 'enum') return Math.max(0, Math.min(1, x / v.max));
+  return (x === 0 || x === '0') ? 0 : 1;
+}
+function dotColor(v, x) {
+  const zero = (x === 0 || x === '0');
+  if (v.kind === 'err') return zero ? C.muted : C.red;
+  if (v.kind === 'ok') return zero ? C.red : C.teal;
+  return zero ? C.muted : C.amber;
+}
+
+function draw() {
+  const W = panel.clientWidth;
+  if (W < 50) return;
+  const lay = layoutOf(order, drag && drag.key, drag && drag.target);
+  curLayout = lay;
+  setupCanvas(axisCv, actx, W, AXIS_H);
+  setupCanvas(mainCv, ctx, W, lay.total);
+
+  const plotL = LEFT, plotR = W - RIGHT, plotW = plotR - plotL;
+  const [t0, t1] = viewRange();
+  const span = t1 - t0;
+  const xOf = t => plotL + (t - t0) / span * plotW;
+  const cols = store.cols;
+  const i0 = Math.max(0, lowerBound(t0) - 1);
+  let i1 = Math.min(cols.length - 1, lowerBound(t1) + 1);
+  if (i1 < i0) i1 = i0 - 1;
+  const dense = (i1 - i0) > plotW * 1.5;
+
+  // hover
+  let hoverIdx = -1, hoverT = null;
+  if (hoverX !== null && cols.length) {
+    hoverT = t0 + (hoverX - plotL) / plotW * span;
+    let k = lowerBound(hoverT);
+    if (k >= cols.length) k = cols.length - 1;
+    if (k > 0 && Math.abs(cols[k - 1].t - hoverT) < Math.abs(cols[k].t - hoverT)) k--;
+    hoverIdx = k;
+  }
+  const valueAt = id => hoverIdx >= 0 ? cols[hoverIdx].v[id] : store.latest[id];
+
+  // ---- ось времени
+  const step = niceStep(span, plotW);
+  actx.fillStyle = C.bg; actx.fillRect(0, 0, W, AXIS_H);
+  actx.strokeStyle = C.border; actx.beginPath(); actx.moveTo(0, AXIS_H - .5); actx.lineTo(W, AXIS_H - .5); actx.stroke();
+  actx.font = '11px ' + C.mono; actx.fillStyle = C.muted; actx.textAlign = 'center'; actx.textBaseline = 'middle';
+  const ticks = [];
+  for (let t = Math.ceil(t0 / step) * step; t <= t1 + 1e-9; t += step) ticks.push(t);
+  for (const t of ticks) actx.fillText(fmtT(t, step), xOf(t), AXIS_H / 2);
+  actx.textAlign = 'left'; actx.fillText('с', 8, AXIS_H / 2);
+  if (hoverIdx >= 0) {
+    const tx = xOf(cols[hoverIdx].t);
+    const label = cols[hoverIdx].t.toFixed(1) + ' с';
+    actx.fillStyle = C.amber; actx.fillRect(tx - 28, 2, 56, AXIS_H - 6);
+    actx.fillStyle = '#14160f'; actx.textAlign = 'center'; actx.fillText(label, tx, AXIS_H / 2 - 1);
+  }
+
+  // ---- основной холст
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, lay.total);
+  // сетка по времени
+  ctx.strokeStyle = C.border; ctx.globalAlpha = .45; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const t of ticks) { const x = Math.round(xOf(t)) + .5; ctx.moveTo(x, 0); ctx.lineTo(x, lay.total); }
+  ctx.stroke(); ctx.globalAlpha = 1;
+
+  const rowFont = '11px ' + C.mono;
+
+  const drawItem = (it, y0) => {
+    const h = it.h;
+
+    if (it.type === 'group') {
+      ctx.fillStyle = C.band; ctx.fillRect(0, y0, W, h);
+      ctx.fillStyle = C.amber; ctx.font = '700 12px ' + C.mono; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(it.title.toUpperCase(), 8, y0 + h / 2);
+      return;
+    }
+
+    // разделитель строки
+    ctx.strokeStyle = C.border; ctx.beginPath(); ctx.moveTo(0, y0 + h - .5); ctx.lineTo(W, y0 + h - .5); ctx.stroke();
+    // рукоятка перетаскивания
+    ctx.fillStyle = C.muted;
+    for (let a = 0; a < 2; a++) for (let b = 0; b < 3; b++) ctx.fillRect(4 + a * 4, y0 + h / 2 - 7 + b * 5, 2, 2);
+
+    if (it.type === 'line') {
+      const v = it.v;
+      ctx.font = rowFont; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      ctx.fillStyle = C.text; ctx.fillText(v.name, 16, y0 + 14);
+
+      let mn = Infinity, mx = -Infinity;
+      for (let i = i0; i <= i1; i++) {
+        const x = cols[i].v[v.id];
+        if (typeof x === 'number') { if (x < mn) mn = x; if (x > mx) mx = x; }
+      }
+      const val = valueAt(v.id);
+      ctx.textAlign = 'left'; ctx.fillStyle = C.amber; ctx.font = '700 12px ' + C.mono;
+      ctx.fillText(fmtVal(val, v.int), plotR + 8, y0 + h / 2);
+      if (mn === Infinity) return;
+
+      if (mn === mx) { const d = Math.abs(mn) * .05 || 1; mn -= d; mx += d; }
+      const pad = (mx - mn) * .08; mn -= pad; mx += pad;
+      const top = y0 + 6, bot = y0 + h - 6;
+      const yOf = x => bot - (x - mn) / (mx - mn) * (bot - top);
+
+      ctx.font = '10px ' + C.mono; ctx.fillStyle = C.muted; ctx.textAlign = 'right';
+      ctx.fillText(fmtScale(mx), plotL - 6, top + 5);
+      ctx.fillText(fmtScale(mn), plotL - 6, bot - 4);
+
+      ctx.save();
+      ctx.beginPath(); ctx.rect(plotL, y0, plotW, h); ctx.clip();
+      if (mn < 0 && mx > 0) {
+        ctx.strokeStyle = C.border; ctx.beginPath(); ctx.moveTo(plotL, yOf(0) + .5); ctx.lineTo(plotR, yOf(0) + .5); ctx.stroke();
+      }
+      ctx.strokeStyle = C.amber; ctx.lineWidth = 1.4; ctx.beginPath();
+      if (!dense) {
+        let prevT = null;
+        for (let i = i0; i <= i1; i++) {
+          const x = cols[i].v[v.id];
+          if (typeof x !== 'number') continue;
+          const px = xOf(cols[i].t), py = yOf(x);
+          if (prevT === null || cols[i].t - prevT > 1.0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          prevT = cols[i].t;
+        }
+      } else {
+        let curPx = null, lo = 0, hi = 0;
+        const flush = () => { if (curPx !== null) { ctx.moveTo(curPx + .5, yOf(lo)); ctx.lineTo(curPx + .5, yOf(hi)); } };
+        for (let i = i0; i <= i1; i++) {
+          const x = cols[i].v[v.id];
+          if (typeof x !== 'number') continue;
+          const px = Math.floor(xOf(cols[i].t));
+          if (px !== curPx) { flush(); curPx = px; lo = hi = x; } else { if (x < lo) lo = x; if (x > hi) hi = x; }
+        }
+        flush();
+      }
+      ctx.stroke(); ctx.lineWidth = 1;
+      ctx.restore();
+
+    } else if (it.type === 'lane') {
+      const v = it.v;
+      ctx.font = rowFont; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      ctx.fillStyle = C.text; ctx.fillText(v.name, 16, y0 + h / 2);
+      const val = valueAt(v.id);
+      ctx.fillStyle = (val === undefined) ? C.muted : dotColor(v, val); ctx.font = '700 12px ' + C.mono;
+      ctx.fillText(fmtVal(val, true), plotR + 8, y0 + h / 2);
+
+      const yL = lv => y0 + h - 6 - lv * (h - 14);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(plotL, y0, plotW, h); ctx.clip();
+      // ступенчатая линия
+      ctx.strokeStyle = C.muted; ctx.globalAlpha = .6; ctx.beginPath();
+      let prevT = null, prevY = 0;
+      const changes = [];
+      let prevVal;
+      for (let i = i0; i <= i1; i++) {
+        const x = cols[i].v[v.id];
+        if (x === undefined) continue;
+        const px = xOf(cols[i].t), py = yL(levelOf(v, x));
+        if (prevT === null || cols[i].t - prevT > 1.0) ctx.moveTo(px, py);
+        else { ctx.lineTo(px, prevY); ctx.lineTo(px, py); }
+        if (prevVal === undefined || x !== prevVal) changes.push({ px, py, x });
+        prevT = cols[i].t; prevY = py; prevVal = x;
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+      // точки и подписи при смене значения
+      ctx.font = '10px ' + C.mono; ctx.textAlign = 'left';
+      let lastLabelX = -1e9;
+      for (const c of changes) {
+        ctx.fillStyle = dotColor(v, c.x);
+        ctx.beginPath(); ctx.arc(c.px, c.py, 3, 0, Math.PI * 2); ctx.fill();
+        if (c.px - lastLabelX >= 30) {
+          ctx.fillStyle = C.text;
+          ctx.fillText(fmtVal(c.x, true), c.px + 6, c.py < y0 + h / 2 ? c.py + 7 : c.py - 7);
+          lastLabelX = c.px;
+        }
+      }
+      ctx.restore();
+
+    } else if (it.type === 'errs') {
+      const ch = it.chart;
+      ctx.font = '700 11px ' + C.mono; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      ctx.fillStyle = C.text; ctx.fillText(ch.title, 16, y0 + 11);
+      let mx = 1;
+      for (let i = i0; i <= i1; i++) for (const id of ch.ids) { const x = cols[i].v[id]; if (x > mx) mx = x; }
+      const top = y0 + 8, bot = y0 + h - 8;
+      const yOf = x => bot - x / mx * (bot - top);
+
+      ctx.font = '10px ' + C.mono;
+      ctx.textAlign = 'right'; ctx.fillStyle = C.muted;
+      ctx.fillText(String(mx), plotL - 6, top + 4); ctx.fillText('0', plotL - 6, bot);
+      // легенда и значения (по строке на серию)
+      ctx.textAlign = 'left';
+      ch.ids.forEach((id, k) => {
+        const ly = y0 + 26 + k * 14;
+        const col = SERIES_COLORS[k % SERIES_COLORS.length];
+        ctx.fillStyle = col; ctx.fillRect(16, ly - 4, 8, 8);
+        ctx.fillStyle = C.text; ctx.fillText(ch.names[k], 30, ly);
+        const val = valueAt(id);
+        ctx.fillStyle = (val > 0) ? col : C.muted; ctx.font = '700 11px ' + C.mono;
+        ctx.fillText(fmtVal(val, true), plotR + 8, ly);
+        ctx.font = '10px ' + C.mono;
+      });
+
+      ctx.save();
+      ctx.beginPath(); ctx.rect(plotL, y0, plotW, h); ctx.clip();
+      ctx.strokeStyle = C.border; ctx.beginPath(); ctx.moveTo(plotL, bot + .5); ctx.lineTo(plotR, bot + .5); ctx.stroke();
+      ch.ids.forEach((id, k) => {
+        const col = SERIES_COLORS[k % SERIES_COLORS.length];
+        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.4;
+        const buckets = new Map(); // пиксель -> максимум (чтобы не терять события при сжатии)
+        for (let i = i0; i <= i1; i++) {
+          const x = cols[i].v[id];
+          if (!(x > 0)) continue;
+          const px = Math.floor(xOf(cols[i].t));
+          if (!buckets.has(px) || buckets.get(px) < x) buckets.set(px, x);
+        }
+        ctx.beginPath();
+        for (const [px, x] of buckets) { ctx.moveTo(px + .5, bot); ctx.lineTo(px + .5, yOf(x)); }
+        ctx.stroke();
+        for (const [px, x] of buckets) { ctx.beginPath(); ctx.arc(px + .5, yOf(x), 3, 0, Math.PI * 2); ctx.fill(); }
+      });
+      ctx.lineWidth = 1;
+      ctx.restore();
+    }
+  };
+  for (const r of lay.list) drawItem(r.it, r.y);
+
+  // перетаскиваемая строка: пунктирное место и сама строка под курсором
+  if (drag) {
+    const dit = ITEMS[drag.key];
+    ctx.strokeStyle = C.amber; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.strokeRect(1.5, lay.gapY + 1.5, W - 3, dit.h - 3); ctx.setLineDash([]);
+    const fy = Math.max(0, Math.min(lay.total - 8 - dit.h, drag.y - drag.grab));
+    ctx.fillStyle = C.bg; ctx.fillRect(0, fy, W, dit.h);
+    drawItem(dit, fy);
+    ctx.strokeStyle = C.amber; ctx.lineWidth = 2; ctx.strokeRect(1, fy + 1, W - 2, dit.h - 2); ctx.lineWidth = 1;
+  }
+
+  // перекрестие
+  if (hoverIdx >= 0) {
+    const x = Math.round(xOf(cols[hoverIdx].t)) + .5;
+    ctx.strokeStyle = C.amber; ctx.globalAlpha = .7;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, lay.total); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // граница области графиков
+  ctx.strokeStyle = C.border;
+  ctx.beginPath(); ctx.moveTo(plotL + .5, 0); ctx.lineTo(plotL + .5, lay.total);
+  ctx.moveTo(plotR + .5, 0); ctx.lineTo(plotR + .5, lay.total); ctx.stroke();
+}
+
+// ---- мышь / касание
+function canvasY(clientY) { return clientY - mainCv.getBoundingClientRect().top; }
+function rowAt(y) {
+  if (!curLayout) return null;
+  for (const r of curLayout.list) if (y >= r.y && y < r.y + r.it.h) return r;
   return null;
 }
-
-function parseKeyValues(rest) {
-  const kv = {};
-  const re = /([A-Za-z_]+)=(\S+)/g;
-  let m;
-  while ((m = re.exec(rest)) !== null) kv[m[1]] = m[2];
-  return kv;
-}
-
-function handleLine(line) {
-  if (line.length === 0) return;
-  appendConsoleLine(line, classifyLine(line));
-
-  if (line.startsWith('[')) return; // лог-события в дашборд не попадают
-
-  const firstSpace = line.indexOf(' ');
-  if (firstSpace < 0) return;
-  let group = line.slice(0, firstSpace);
-  let rest = line.slice(firstSpace + 1);
-
-  if (group === 'ODRIVE') {
-    const m = rest.match(/^(\S+):\s*(.*)$/);
-    if (m) { group = 'ODRIVE ' + m[1]; rest = m[2]; }
+function targetFor(centerY) { // сколько остальных строк лежит выше центра перетаскиваемой
+  let y = 0, cnt = 0;
+  for (const k of order) {
+    if (k === drag.key) continue;
+    const h = ITEMS[k].h;
+    if (y + h / 2 < centerY) cnt++;
+    y += h;
   }
-
-  const kv = parseKeyValues(rest);
-  if (Object.keys(kv).length === 0) return;
-
-  if (!(group in dashboardGroups)) GROUP_ORDER.push(group);
-  dashboardGroups[group] = kv;
-  renderDashboard();
+  return cnt;
 }
-
-function renderDashboard() {
-  if (GROUP_ORDER.length === 0) return;
-  dashboardEl.innerHTML = '';
-  for (const group of GROUP_ORDER) {
-    const kv = dashboardGroups[group];
-    const card = document.createElement('div');
-    card.className = 'card';
-    const title = document.createElement('div');
-    title.className = 'card-title';
-    title.textContent = group;
-    card.appendChild(title);
-    for (const [k, v] of Object.entries(kv)) {
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML = '<span class="k">' + k + '</span><span class="v">' + v + '</span>';
-      card.appendChild(row);
-    }
-    dashboardEl.appendChild(card);
+function updateDrag() {
+  drag.y = canvasY(lastClientY);
+  drag.target = targetFor(drag.y - drag.grab + ITEMS[drag.key].h / 2);
+  markDirty();
+}
+function endDrag(commit) {
+  if (!drag) return;
+  clearInterval(dragTimer); dragTimer = null;
+  if (commit) {
+    const others = order.filter(k => k !== drag.key);
+    others.splice(drag.target, 0, drag.key);
+    order = others; saveOrder();
   }
+  drag = null; mainCv.style.cursor = ''; markDirty();
 }
+function autoScroll() { // у края панели прокручиваем во время перетаскивания
+  const pr = panel.getBoundingClientRect();
+  let d = 0;
+  if (lastClientY < pr.top + AXIS_H + 30) d = -14; else if (lastClientY > pr.bottom - 30) d = 14;
+  if (d) { const before = panel.scrollTop; panel.scrollTop += d; if (panel.scrollTop !== before) updateDrag(); }
+}
+mainCv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  const r = mainCv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  if (x >= LEFT) return;
+  const row = rowAt(y);
+  if (!row || row.it.type === 'group') return;
+  drag = { key: row.it.key, grab: y - row.y, y, target: order.indexOf(row.it.key) };
+  lastClientY = e.clientY; hoverX = null;
+  mainCv.setPointerCapture(e.pointerId); mainCv.style.cursor = 'grabbing';
+  dragTimer = setInterval(autoScroll, 30);
+  e.preventDefault(); markDirty();
+});
+mainCv.addEventListener('pointermove', e => {
+  if (drag) { lastClientY = e.clientY; updateDrag(); return; }
+  const r = mainCv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const W = panel.clientWidth;
+  hoverX = (x >= LEFT && x <= W - RIGHT) ? x : null;
+  const row = x < LEFT ? rowAt(y) : null;
+  mainCv.style.cursor = (row && row.it.type !== 'group') ? 'grab' : '';
+  markDirty();
+});
+mainCv.addEventListener('pointerup', () => endDrag(true));
+mainCv.addEventListener('pointercancel', () => endDrag(false));
+mainCv.addEventListener('pointerleave', () => { if (!drag) { hoverX = null; markDirty(); } });
+window.addEventListener('keydown', e => { if (e.key === 'Escape') endDrag(false); });
+new ResizeObserver(() => markDirty()).observe(panel);
 
+// ---- кнопки и сервис
+const connectBtn = $('connectBtn'), disconnectBtn = $('disconnectBtn'), demoBtn = $('demoBtn');
+const pauseBtn = $('pauseBtn'), clearBtn = $('clearBtn'), xlsxBtn = $('xlsxBtn'), rawBtn = $('rawBtn');
+const statusDot = $('statusDot'), statusText = $('statusText'), statsEl = $('stats'), noteEl = $('note');
+
+let bleDevice = null, rxBuffer = '', demoTimer = null, splitting = false;
 const decoder = new TextDecoder('utf-8');
-function onNotification(event) {
-  const chunk = decoder.decode(event.target.value);
-  rxBuffer += chunk;
-  let idx;
+
+function setNote(t) { noteEl.textContent = t || ''; }
+function stamp() {
+  const d = store.startWall || new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+async function exportXlsx(cols, part) {
+  const bytes = await buildXlsx(cols);
+  download(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+           'ELLIC_' + stamp() + '_part' + part + '.xlsx');
+}
+async function checkSplit() {
+  if (splitting || store.cols.length - store.partStart < MAX_COLS) return;
+  splitting = true;
+  const slice = store.cols.slice(store.partStart), part = store.partIndex;
+  store.partStart = store.cols.length; store.partIndex++;
+  try { await exportXlsx(slice, part); setNote('часть ' + part + ' сохранена, запись продолжается'); }
+  finally { splitting = false; }
+}
+
+function setStatus(on, label) {
+  statusDot.classList.toggle('on', on);
+  statusText.textContent = on ? ('подключено · ' + (label || 'ELLIC')) : (demoTimer ? 'демо' : 'не подключено');
+  connectBtn.disabled = on || !!demoTimer || !navigator.bluetooth;
+  disconnectBtn.disabled = !on;
+  demoBtn.disabled = on;
+}
+
+function pushText(text) {
+  rxBuffer += text;
+  let idx, got = false;
   while ((idx = rxBuffer.indexOf('\n')) >= 0) {
     const line = rxBuffer.slice(0, idx).replace(/\r$/, '');
     rxBuffer = rxBuffer.slice(idx + 1);
-    handleLine(line);
+    if (feedLine(line)) got = true;
   }
+  if (got) { markDirty(); checkSplit(); }
 }
 
-function onGattDisconnected() {
-  setStatus(false);
-  appendConsoleLine('— соединение разорвано —', 'sys');
-}
+const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const CHAR_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
 async function connect() {
   try {
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }],
-      optionalServices: [SERVICE_UUID]
+    bleDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE_UUID] }], optionalServices: [SERVICE_UUID]
     });
-    device.addEventListener('gattserverdisconnected', onGattDisconnected);
-
-    appendConsoleLine('— подключение к ' + device.name + '… —', 'sys');
-    const server = await device.gatt.connect();
+    bleDevice.addEventListener('gattserverdisconnected', () => { setStatus(false); setNote('соединение разорвано'); });
+    setNote('подключение…');
+    const server = await bleDevice.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
-    const txChar = await service.getCharacteristic(CHAR_TX_UUID);
-    await txChar.startNotifications();
-    txChar.addEventListener('characteristicvaluechanged', onNotification);
-
-    setStatus(true, device.name);
-    appendConsoleLine('— подключено, ждём телеметрию —', 'sys');
+    const tx = await service.getCharacteristic(CHAR_TX_UUID);
+    await tx.startNotifications();
+    tx.addEventListener('characteristicvaluechanged', e => pushText(decoder.decode(e.target.value, { stream: true })));
+    rxBuffer = '';
+    setStatus(true, bleDevice.name); setNote('');
   } catch (err) {
-    appendConsoleLine('Ошибка подключения: ' + err, 'log-error');
-    setStatus(false);
+    setNote('ошибка подключения: ' + err); setStatus(false);
   }
 }
+function disconnect() { if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect(); }
 
-function disconnect() {
-  if (device && device.gatt.connected) device.gatt.disconnect();
+function startDemo() {
+  clearAll();
+  const tick = makeDemo();
+  demoTimer = setInterval(() => { for (const l of tick()) feedLine(l); markDirty(); checkSplit(); }, PERIOD_MS);
+  demoBtn.textContent = 'Стоп демо'; demoBtn.classList.add('active');
+  setStatus(false);
 }
-
-function clearLog() {
-  consoleEl.innerHTML = '<div class="empty">Лог очищен.</div>';
-  lineCount = 0;
-  lineCountEl.textContent = '0 строк';
+function stopDemo() {
+  clearInterval(demoTimer); demoTimer = null;
+  demoBtn.textContent = 'Демо'; demoBtn.classList.remove('active');
+  setStatus(false);
 }
+function clearAll() { resetStore(); rxBuffer = ''; paused = false; pauseBtn.classList.remove('active'); pauseBtn.textContent = 'Пауза'; setNote(''); markDirty(); }
 
 connectBtn.addEventListener('click', connect);
 disconnectBtn.addEventListener('click', disconnect);
-clearBtn.addEventListener('click', clearLog);
+demoBtn.addEventListener('click', () => demoTimer ? stopDemo() : startDemo());
+clearBtn.addEventListener('click', clearAll);
+$('orderBtn').addEventListener('click', () => { order = DEFAULT_ORDER.slice(); saveOrder(); markDirty(); });
+$('winSel').addEventListener('change', e => { win = Number(e.target.value); markDirty(); });
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  if (paused) { const n = store.cols.length; pausedEnd = n ? store.cols[n - 1].t : 0; }
+  pauseBtn.classList.toggle('active', paused);
+  pauseBtn.textContent = paused ? 'Продолжить' : 'Пауза';
+  markDirty();
+});
+xlsxBtn.addEventListener('click', async () => {
+  const slice = store.cols.slice(store.partStart);
+  if (!slice.length) { setNote('нет данных для экспорта'); return; }
+  xlsxBtn.disabled = true;
+  try { await exportXlsx(slice, store.partIndex); setNote(''); } finally { xlsxBtn.disabled = false; }
+});
+rawBtn.addEventListener('click', () => {
+  if (!store.raw.length) { setNote('нет данных для сохранения'); return; }
+  download(new Blob([store.raw.join('\n') + '\n'], { type: 'text/plain' }), 'ELLIC_raw_' + stamp() + '.txt');
+});
 
-if (!navigator.bluetooth) {
-  document.getElementById('mainArea').innerHTML =
-    '<div class="unsupported"><strong>Web Bluetooth недоступен в этом браузере.</strong><br><br>' +
-    'Откройте страницу в Chrome или Edge на Windows (последняя версия) и включите системный Bluetooth. ' +
-    'Safari и Firefox Web Bluetooth не поддерживают.</div>';
-  connectBtn.disabled = true;
-}
+setInterval(() => {
+  const n = store.cols.length;
+  statsEl.textContent = n ? ('пакетов ' + n + ' · ' + store.cols[n - 1].t.toFixed(1) + ' с' + (store.bad ? ' · ошибок разбора ' + store.bad : '')) : '';
+}, 500);
+
+setStatus(false);
+if (!navigator.bluetooth) setNote('Web Bluetooth недоступен (нужен Chrome/Edge) — можно посмотреть «Демо»');
+markDirty();
+if (location.hash === '#demo') startDemo();
 </script>
 </body>
 </html>

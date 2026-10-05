@@ -38,8 +38,7 @@ static const float    ENCODER_SIGN           = -1.0f; // инверсия нап
 static const float    LEFT_WHEEL_SIGN        = 1.0f;
 static const float    RIGHT_WHEEL_SIGN       = -1.0f;
 
-static const uint32_t TELEMETRY_PERIOD_MS       = 150; // период collect()
-static const uint32_t TELEMETRY_PRINT_PERIOD_MS = 1000; // период printScheduled() (~10 Гц)
+static const uint32_t TELEMETRY_PERIOD_MS = 200; // период сбора и печати пакета M/L/R/E
 
 static const uint32_t CAN_NODE_STALE_MS = 300; // раздел 5/13: порог offline
 
@@ -51,14 +50,13 @@ static const uint8_t LEFT_ODRIVE_NODE_ID  = 2;
 // Общие перечисления и структуры-снапшоты (раздел 12.3)
 // =======================================================================
 
-enum class LogLevel { INFO, WARNING, ERROR, CRITICAL };
-
 enum class MotionMode { NORMAL, CALM, TURN };
 
 struct EncoderSnapshot {
     float rawAngle;        // последнее валидное значение AS5600, 0..360
     float continuousAngle; // накопленный (безразрывный) угол
     float lastDelta;       // последняя дельта, посчитанная в Encoder::update()
+    uint32_t readErrors;   // накопительно: неудачные чтения AS5600
 };
 
 struct MotionSnapshot {
@@ -93,6 +91,14 @@ struct OdriveSnapshot {
     uint32_t rxCount;
     uint32_t rxFailCount;
     uint32_t diagnosticsTimestampMs;
+    
+    uint32_t txFailCount;       // отказы twai_transmit()
+    uint32_t offlineCount;      // переходы online -> offline
+    uint32_t axisErrCount;      // новые ненулевые значения axisError
+    uint32_t motorErrCount;
+    uint32_t encoderErrCount;
+    uint32_t controllerErrCount;
+
 };
 
 struct TelemetrySample {

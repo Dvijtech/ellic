@@ -7,7 +7,9 @@ Encoder::Encoder()
       _initialized(false),
       _previousRawAngle(0.0f),
       _continuousAngle(0.0f),
-      _lastDelta(0.0f) {}
+      
+      _lastDelta(0.0f),
+      _readErrors(0) {}
 
 void Encoder::begin(Telemetry* telemetry) {
     _telemetry = telemetry;
@@ -15,6 +17,7 @@ void Encoder::begin(Telemetry* telemetry) {
     _previousRawAngle = 0.0f;
     _continuousAngle = 0.0f;
     _lastDelta = 0.0f;
+    _readErrors = 0;
 }
 
 // Чтение 12-битного RAW ANGLE регистра AS5600 (0x0C/0x0D) -> градусы 0..360.
@@ -45,9 +48,7 @@ void Encoder::update() {
     if (!readRawAngleDeg(raw)) {
         // Раздел 6.3: continuousAngle и previousRawAngle НЕ обновляются,
         // функция(снапшот) продолжает отдавать последнее валидное значение.
-        if (_telemetry != nullptr) {
-            _telemetry->log(LogLevel::WARNING, "Encoder", "AS5600 read error (<2 bytes)");
-        }
+        _readErrors++;
         return;
     }
 
@@ -77,5 +78,6 @@ EncoderSnapshot Encoder::getSnapshot() const {
     s.rawAngle = _previousRawAngle;
     s.continuousAngle = _continuousAngle;
     s.lastDelta = _lastDelta;
+    s.readErrors = _readErrors;
     return s;
 }

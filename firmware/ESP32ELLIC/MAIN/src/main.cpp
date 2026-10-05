@@ -38,7 +38,7 @@ void setup() {
     pinMode(LEFT_BRAKE_PIN, INPUT_PULLUP);
     pinMode(RIGHT_BRAKE_PIN, INPUT_PULLUP);
 
-    telemetry.begin(LogLevel::INFO);
+    telemetry.begin();
 
     encoder.begin(&telemetry);
     motionController.begin();
@@ -56,8 +56,6 @@ void setup() {
     // Раздел 10.1/10.2: явная ASCII-конфигурация ODrive из ESP32 не
     // выполняется. При работе по CAN она не предусмотрена в принципе -
     // соответствующего метода в ODriveCAN намеренно нет.
-
-    telemetry.log(LogLevel::INFO, "main", "ELLIC system initialized (CAN)");
 
     lastControlMs = millis();
 }

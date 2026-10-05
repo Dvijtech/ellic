@@ -66,6 +66,13 @@ private:
         uint32_t rxCount;
         uint32_t rxFailCount;
         uint32_t diagnosticsTimestampMs;
+        
+        uint32_t txFailCount;
+        uint32_t offlineCount;
+        uint32_t axisErrCount;
+        uint32_t motorErrCount;
+        uint32_t encoderErrCount;
+        uint32_t controllerErrCount;
     };
 
     static void initChannel(WheelChannel &ch, uint8_t nodeId, const char* label);

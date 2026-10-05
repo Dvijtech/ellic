@@ -28,4 +28,6 @@ private:
     float _previousRawAngle;  // последнее валидное сырое значение, град.
     float _continuousAngle;   // накопленный угол, град.
     float _lastDelta;         // последняя посчитанная дельта (уровень энкодера)
+    
+    uint32_t _readErrors;     // накопительный счётчик неудачных чтений
 };

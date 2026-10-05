@@ -11,55 +11,21 @@ Telemetry::Telemetry(Encoder* encoder, MotionController* motion, ODriveCAN* odri
       _motion(motion),
       _odriveCAN(odriveCAN),
       _ble(nullptr),
-      _lastCollectMs(0),
-      _lastPrintMs(0),
-      _minLevel(LogLevel::INFO),
-      _logWriteIndex(0),
-      _logCount(0) {
-    memset(&_sample, 0, sizeof(_sample));
+      _lastMs(0),
+      _prevAs5600(0) {
+    memset(&_prevLeft, 0, sizeof(_prevLeft));
+    memset(&_prevRight, 0, sizeof(_prevRight));
 }
 
 void Telemetry::setBleTelemetry(BleTelemetry* ble) {
     _ble = ble;
 }
 
-void Telemetry::begin(LogLevel minLevel) {
-    _minLevel = minLevel;
-    _lastCollectMs = millis();
-    _lastPrintMs = millis();
-    _logCount = 0;
+void Telemetry::begin() {
+    _lastMs = millis();
 }
 
-void Telemetry::collect() {
-    _sample.encoder = _encoder->getSnapshot();
-    _sample.motion  = _motion->getSnapshot();
-    _sample.left    = _odriveCAN->getLeftSnapshot();
-    _sample.right   = _odriveCAN->getRightSnapshot();
-}
-
-static const char* modeToStr(MotionMode m) {
-    switch (m) {
-        case MotionMode::NORMAL: return "NORMAL";
-        case MotionMode::CALM:   return "CALM";
-        case MotionMode::TURN:   return "TURN";
-    }
-    return "?";
-}
-
-static const char* levelToStr(LogLevel l) {
-    switch (l) {
-        case LogLevel::INFO:     return "INFO";
-        case LogLevel::WARNING:  return "WARNING";
-        case LogLevel::ERROR:    return "ERROR";
-        case LogLevel::CRITICAL: return "CRITICAL";
-    }
-    return "?";
-}
-
-// Единственная точка, где текст телеметрии реально уходит наружу.
-// Serial.print() тут же, плюс дублирование в BLE, если он подключён -
-// таким образом состав данных не может разойтись между каналами: он
-// формируется один раз (snprintf) и просто передаётся в оба места.
+// Единственная точка вывода: Serial + (если подключён) BLE, один и тот же текст.
 void Telemetry::emit(const char* text) const {
     Serial.print(text);
     if (_ble != nullptr) {
@@ -67,101 +33,101 @@ void Telemetry::emit(const char* text) const {
     }
 }
 
-static void formatOdrive(char* buf, size_t bufSize, const char* name, const OdriveSnapshot &s) {
-    snprintf(buf, bufSize,
-             "ODRIVE %s: online=%d state=%d axis_err=%lu motor_err=%llu enc_err=%lu ctrl_err=%lu traj_done=%d "
-             "Iq=%.3f vel=%.3f Vbus=%.2f Ibus=%.3f tx=%lu rx=%lu rx_fail=%lu diag_ts=%lu\n",
-             name, s.online ? 1 : 0, s.axisState,
-             (unsigned long)s.axisError, (unsigned long long)s.motorError,
-             (unsigned long)s.encoderError, (unsigned long)s.controllerError,
-             s.trajectoryDone ? 1 : 0,
-             s.Iq, s.velEstimate, s.busVoltage, s.busCurrent,
-             (unsigned long)s.txCount, (unsigned long)s.rxCount,
-             (unsigned long)s.rxFailCount, (unsigned long)s.diagnosticsTimestampMs);
+Telemetry::WheelCounters Telemetry::countersOf(const OdriveSnapshot &s) {
+    WheelCounters c;
+    c.tx = s.txCount;
+    c.rx = s.rxCount;
+    c.txFail = s.txFailCount;
+    c.stale = s.rxFailCount;
+    c.offline = s.offlineCount;
+    c.axisErr = s.axisErrCount;
+    c.motErr = s.motorErrCount;
+    c.encErr = s.encoderErrCount;
+    c.ctrlErr = s.controllerErrCount;
+    return c;
 }
 
-void Telemetry::printSample() const {
-    const EncoderSnapshot &enc = _sample.encoder;
-    const MotionSnapshot &mo = _sample.motion;
-    char line[220];
+static int modeToInt(MotionMode m) {
+    switch (m) {
+        case MotionMode::NORMAL: return 0;
+        case MotionMode::CALM:   return 1;
+        case MotionMode::TURN:   return 2;
+    }
+    return 0;
+}
 
-    snprintf(line, sizeof(line), "ENC raw=%.2f cont=%.2f delta=%.3f\n",
-             enc.rawAngle, enc.continuousAngle, enc.lastDelta);
-    emit(line);
+// L/R,ts,online,state,traj,iq,vel,vbus,ibus,axisErr,motorErr,encErr,ctrlErr,tx,rx
+// tx/rx - число кадров за период (не накопительно).
+static void formatWheel(char* buf, size_t bufSize, char type, uint32_t ts,
+                        const OdriveSnapshot &s, uint32_t txDelta, uint32_t rxDelta) {
+    snprintf(buf, bufSize,
+             "%c,%lu,%d,%d,%d,%.2f,%.3f,%.2f,%.2f,%lX,%llX,%lX,%lX,%lu,%lu\n",
+             type, (unsigned long)ts,
+             s.online ? 1 : 0, s.axisState, s.trajectoryDone ? 1 : 0,
+             s.Iq, s.velEstimate, s.busVoltage, s.busCurrent,
+             (unsigned long)s.axisError, (unsigned long long)s.motorError,
+             (unsigned long)s.encoderError, (unsigned long)s.controllerError,
+             (unsigned long)txDelta, (unsigned long)rxDelta);
+}
 
-    snprintf(line, sizeof(line), "BRAKE left=%d right=%d both=%d TURN zone=%d\n",
-             mo.leftBrake ? 1 : 0, mo.rightBrake ? 1 : 0,
-             (mo.leftBrake && mo.rightBrake) ? 1 : 0, mo.inTurnZone ? 1 : 0);
-    emit(line);
+void Telemetry::sendPacket(uint32_t ts) {
+    EncoderSnapshot enc = _encoder->getSnapshot();
+    MotionSnapshot mo = _motion->getSnapshot();
+    OdriveSnapshot l = _odriveCAN->getLeftSnapshot();
+    OdriveSnapshot r = _odriveCAN->getRightSnapshot();
 
-    snprintf(line, sizeof(line), "MOTION mode=%s valDelta=%.4f\n", modeToStr(mo.mode), mo.valDelta);
-    emit(line);
+    WheelCounters cl = countersOf(l);
+    WheelCounters cr = countersOf(r);
+    char line[200];
 
-    snprintf(line, sizeof(line), "WHEEL delta left=%.4f right=%.4f\n",
+    // M,ts,raw,cont,delta,valDelta,mode,flags,leftWheelDelta,rightWheelDelta
+    // flags: бит0 левый тормоз, бит1 правый тормоз, бит2 TURN_ZONE
+    int flags = (mo.leftBrake ? 1 : 0) | (mo.rightBrake ? 2 : 0) | (mo.inTurnZone ? 4 : 0);
+    snprintf(line, sizeof(line), "M,%lu,%.1f,%.1f,%.2f,%.2f,%d,%d,%.3f,%.3f\n",
+             (unsigned long)ts, enc.rawAngle, enc.continuousAngle, enc.lastDelta,
+             mo.valDelta, modeToInt(mo.mode), flags,
              mo.leftWheelDelta, mo.rightWheelDelta);
     emit(line);
 
-    formatOdrive(line, sizeof(line), "LEFT", _sample.left);
+    formatWheel(line, sizeof(line), 'L', ts, l, cl.tx - _prevLeft.tx, cl.rx - _prevLeft.rx);
     emit(line);
 
-    formatOdrive(line, sizeof(line), "RIGHT", _sample.right);
+    formatWheel(line, sizeof(line), 'R', ts, r, cr.tx - _prevRight.tx, cr.rx - _prevRight.rx);
     emit(line);
-}
 
-void Telemetry::printLogBuffer() {
-    int start = (_logWriteIndex - _logCount + LOG_BUFFER_SIZE) % LOG_BUFFER_SIZE;
-    char line[128];
-    for (int i = 0; i < _logCount; i++) {
-        int idx = (start + i) % LOG_BUFFER_SIZE;
-        const LogEntry &e = _logBuffer[idx];
-        snprintf(line, sizeof(line), "[%s] %s: %s\n", levelToStr(e.level), e.module, e.msg);
-        emit(line);
-    }
-    _logCount = 0;
-}
+    // E,ts,as5600,lTxFail,rTxFail,lStale,rStale,lOffline,rOffline,
+    //   lAxisErr,rAxisErr,lMotErr,rMotErr,lEncErr,rEncErr,lCtrlErr,rCtrlErr
+    // Значения - число событий с прошлой выдачи (разность uint32 корректна
+    // и при переполнении счётчика).
+    snprintf(line, sizeof(line),
+             "E,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+             (unsigned long)ts,
+             (unsigned long)(enc.readErrors - _prevAs5600),
+             (unsigned long)(cl.txFail - _prevLeft.txFail),
+             (unsigned long)(cr.txFail - _prevRight.txFail),
+             (unsigned long)(cl.stale - _prevLeft.stale),
+             (unsigned long)(cr.stale - _prevRight.stale),
+             (unsigned long)(cl.offline - _prevLeft.offline),
+             (unsigned long)(cr.offline - _prevRight.offline),
+             (unsigned long)(cl.axisErr - _prevLeft.axisErr),
+             (unsigned long)(cr.axisErr - _prevRight.axisErr),
+             (unsigned long)(cl.motErr - _prevLeft.motErr),
+             (unsigned long)(cr.motErr - _prevRight.motErr),
+             (unsigned long)(cl.encErr - _prevLeft.encErr),
+             (unsigned long)(cr.encErr - _prevRight.encErr),
+             (unsigned long)(cl.ctrlErr - _prevLeft.ctrlErr),
+             (unsigned long)(cr.ctrlErr - _prevRight.ctrlErr));
+    emit(line);
 
-void Telemetry::printScheduled() {
-    printSample();
-    printLogBuffer();
+    _prevAs5600 = enc.readErrors;
+    _prevLeft = cl;
+    _prevRight = cr;
 }
 
 void Telemetry::update() {
     uint32_t now = millis();
-
-    if (now - _lastCollectMs >= TELEMETRY_PERIOD_MS) {
-        _lastCollectMs = now;
-        collect();
-    }
-
-    if (now - _lastPrintMs >= TELEMETRY_PRINT_PERIOD_MS) {
-        _lastPrintMs = now;
-        printScheduled();
-    }
-}
-
-void Telemetry::log(LogLevel level, const char* module, const char* msg) {
-    if (level < _minLevel) {
-        return;
-    }
-
-    if (level == LogLevel::ERROR || level == LogLevel::CRITICAL) {
-        // Раздел 12.2: печатаются немедленно, синхронно, минуя расписание.
-        char line[128];
-        snprintf(line, sizeof(line), "[%s] %s: %s\n", levelToStr(level), module, msg);
-        emit(line);
-        return;
-    }
-
-    // INFO / WARNING - в кольцевой буфер до ближайшего printScheduled().
-    int idx = _logWriteIndex;
-    _logBuffer[idx].level = level;
-    strncpy(_logBuffer[idx].module, module, sizeof(_logBuffer[idx].module) - 1);
-    _logBuffer[idx].module[sizeof(_logBuffer[idx].module) - 1] = '\0';
-    strncpy(_logBuffer[idx].msg, msg, sizeof(_logBuffer[idx].msg) - 1);
-    _logBuffer[idx].msg[sizeof(_logBuffer[idx].msg) - 1] = '\0';
-
-    _logWriteIndex = (_logWriteIndex + 1) % LOG_BUFFER_SIZE;
-    if (_logCount < LOG_BUFFER_SIZE) {
-        _logCount++;
+    if (now - _lastMs >= TELEMETRY_PERIOD_MS) {
+        _lastMs = now;
+        sendPacket(now);
     }
 }
