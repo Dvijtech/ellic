@@ -29,16 +29,16 @@ static const uint32_t CAN_BITRATE = 250000; // бит/с
 // =======================================================================
 
 static const uint32_t CONTROL_PERIOD_MS      = 300;   // период MotionController.update()
-static const float    MOTOR_GEAR_RATIO       = 6.4f;  // передаточное число редуктора
+static const float    MOTOR_GEAR_RATIO       = 6.33f;  // передаточное число редуктора
 static const float    TURN_ZONE_DEG          = 10.0f; // ширина зоны поворота
-static const float    TURN_STEP              = 1.0f; // шаг противоположного колеса при повороте (оборотов)
+static const float    TURN_STEP              = 0.7f; // шаг противоположного колеса при повороте (оборотов)
 
 static const float    ENCODER_SIGN           = -1.0f; // инверсия направления энкодера (только для NORMAL)
 
 static const float    LEFT_WHEEL_SIGN        = 1.0f;
 static const float    RIGHT_WHEEL_SIGN       = -1.0f;
 
-static const uint32_t TELEMETRY_PERIOD_MS = 200; // период сбора и печати пакета M/L/R/E
+static const uint32_t TELEMETRY_PERIOD_MS = 100; // период сбора и печати пакета M/L/R/E
 
 static const uint32_t CAN_NODE_STALE_MS = 300; // раздел 5/13: порог offline
 

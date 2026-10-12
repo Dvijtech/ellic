@@ -1,7 +1,0 @@
-Axis
-
-Motor
-
-Encoder
-
-Controller

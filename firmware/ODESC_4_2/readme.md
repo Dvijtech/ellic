@@ -1,4 +1,5 @@
 # ODESC 4.2 — ввод в работу нового ODrive (ELLIC)
+# далее инструкция по настройке лимитов тока и интегральных коэффициентов
 
 Ожидаемо: прошивка **0.5.6**, железо **3.6**, протокол **CAN Simple**, 250000 бит/с, мотор на **axis0**, энкодер — Hall (mode 1, cpr 42).
 
@@ -172,3 +173,206 @@ odrivetool backup-config backups/ellic_node<N>_<serial>.json
 - [ ] `Config.h` проверен (см. ниже)
 
 > Внимание: значения в `Config.h` расходятся со спецификацией — `MOTOR_GEAR_RATIO = 6.4` (в спеке 4.4), `TURN_STEP = 1.0` (в спеке 0.03), `TELEMETRY_PRINT_PERIOD_MS = 1000` (в спеке 100). Если это не осознанные настройки под новую сборку — верни спецификационные значения перед первым запуском колёс. TURN_STEP = 1.0 это целый оборот мотора за один цикл.
+
+
+
+# далее инструкция по настройке лимитов тока и интегральных коэффициентов
+
+# Инструкция: настройка ODrive по шагам
+
+Каждый этап заканчивается проверкой. Если проверка не пройдена, дальше не идём и присылаешь вывод. Изменения живут в RAM, пока нет `save_configuration()`.
+
+## Этап 0. Условия
+- По USB подключён **один** ODrive. ESP32 и CAN отключены.
+- Питание **второй** платы физически снято (левая держит позицию после включения).
+- Колесо поднято. Силовое питание под рукой.
+- Блоки вставляй целиком. После вставки нажми Enter ещё раз, первая строка-комментарий может потеряться.
+
+## Этап 1. Бэкап и снимок
+
+В обычном терминале:
+```
+odrivetool backup-config backups/ellic_before_<дата>.json
+```
+
+В `odrivetool`:
+```python
+# снимок состояния платы
+a = dev0.axis0; c = a.controller.config
+print("node_id", a.config.can.node_id, "(1=RIGHT, 2=LEFT) | serial", hex(dev0.serial_number), "| fw", dev0.fw_version_major, dev0.fw_version_minor, dev0.fw_version_revision)
+print("state", a.current_state, "| errors", a.error, a.motor.error, a.encoder.error, a.controller.error, "| startup_closed_loop", a.config.startup_closed_loop_control)
+print("calibrated motor/enc", a.motor.config.pre_calibrated, a.encoder.config.pre_calibrated, "| bandwidth", a.encoder.config.bandwidth)
+print("input_mode", c.input_mode, "| control_mode", c.control_mode, "| gain_sched", c.enable_gain_scheduling)
+print("vel_gain", c.vel_gain, "| vel_int_gain", c.vel_integrator_gain, "| vel_int_limit", c.vel_integrator_limit, "| pos_gain", c.pos_gain)
+print("vel_limit", c.vel_limit, "| current_lim", a.motor.config.current_lim, "| torque_lim", a.motor.config.torque_lim)
+print("dc_max_positive", dev0.config.dc_max_positive_current, "| dc_max_negative", dev0.config.dc_max_negative_current, "| Vbus", dev0.vbus_voltage)
+
+```
+**Проверка:** fw 0.5.6, `pre_calibrated` у мотора и энкодера True, Vbus около 40. `node_id` показывает, какая это плата (1 = правая, 2 = левая). Если `pre_calibrated` False, сначала калибровка по шагу 4 из readme.
+
+## Этап 2. Значения и проверка в воздухе
+
+```python
+# накатываем рабочие значения (в RAM)
+a = dev0.axis0; c = a.controller.config
+a.encoder.config.bandwidth = 100
+c.input_mode = 1
+c.control_mode = 3
+c.enable_gain_scheduling = False
+c.enable_torque_mode_vel_limit = True
+c.vel_limit = 2
+c.pos_gain = 12
+c.vel_gain = 0.08
+c.vel_integrator_gain = 0.08
+c.vel_integrator_limit = 0.25
+a.motor.config.current_lim = 10
+dev0.config.dc_max_positive_current = 15
+print("OK:", a.encoder.config.bandwidth, c.input_mode, c.pos_gain, c.vel_gain, c.vel_integrator_gain, c.vel_integrator_limit, a.motor.config.current_lim, dev0.config.dc_max_positive_current)
+
+```
+**Ожидаемо:** `OK: 100.0 1 12.0 0.08 0.08 0.25 10.0 15.0`.
+
+```python
+# тест в воздухе: шаг 0.2 оборота за 300 мс в обе стороны
+import time
+a = dev0.axis0
+if a.current_state != 8:
+    dev0.clear_errors()
+    a.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    time.sleep(0.5)
+for STEP in [0.2, -0.2]:
+    a.controller.input_pos = a.encoder.pos_estimate
+    time.sleep(0.5)
+    p0 = a.encoder.pos_estimate; iq = []
+    for i in range(15):
+        a.controller.input_pos = a.encoder.pos_estimate + STEP
+        t1 = time.time()
+        while time.time() - t1 < 0.3:
+            iq.append(a.motor.current_control.Iq_measured)
+            time.sleep(0.03)
+    done = a.encoder.pos_estimate - p0
+    flips = sum(1 for x, y in zip(iq, iq[1:]) if x*y < 0)
+    print("STEP", STEP, "| прошло", round(done, 3), "из", round(STEP*15, 3), "| Iq", round(min(iq), 2), round(max(iq), 2), "| смен знака", flips, "| state", a.current_state, "| ошибки", a.error, a.controller.error)
+    a.controller.input_pos = a.encoder.pos_estimate
+
+```
+**Проверка:** «прошло» 85–110% от цели, смен знака ≤2, `state` 8, ошибок 0 0, треска нет. При треске поставь `dev0.axis0.encoder.config.bandwidth = 50` и повтори.
+
+## Этап 3. Сохранение
+
+```python
+# сохранение: сначала IDLE (плата перезагрузится, USB пропадёт)
+dev0.axis0.requested_state = AXIS_STATE_IDLE
+dev0.save_configuration()
+
+```
+Переподключись и повтори снимок из этапа 1. Значения должны совпасть с этапом 2. Затем в терминале:
+```
+odrivetool backup-config backups/ellic_node<N>_<serial>_v1.json
+```
+
+## Этап 4. Подъём тока (только на земле, с человеком)
+
+**Условия:** второй ODrive обесточен. Рука на питании. Ноги от колёс. Один прогон ≤8 с, между прогонами 3 минуты. После прогона ладонь на корпус мотора, термистор мультиметром, если есть. `T_fet` ≤70. Порядок `LIM`: 10 → 12 → 15 → 17 → 20, выше не идём.
+
+```python
+# подъём момента ступенью LIM (меняй LIM: 10, 12, 15, 17, 20)
+import time
+LIM = 10
+KT = 0.04
+a = dev0.axis0
+c = a.controller
+old_lim = a.motor.config.current_lim
+p0 = a.encoder.pos_estimate
+moved = False
+try:
+    a.motor.config.current_lim = LIM
+    c.config.enable_torque_mode_vel_limit = False
+    c.config.control_mode = 1
+    c.input_torque = 0
+    a.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    time.sleep(0.3)
+    t = 0.0
+    dt = LIM * KT / 32
+    for i in range(32):
+        t += dt
+        c.input_torque = t
+        time.sleep(0.25)
+        d = a.encoder.pos_estimate - p0
+        Tf = a.motor.fet_thermistor.temperature
+        print("torque", round(t, 3), "Iq", round(a.motor.current_control.Iq_measured, 2), "dpos", round(d, 3), "T_fet", round(Tf, 1), "state", a.current_state)
+        if a.current_state != 8:
+            print("СТОП: ось не в состоянии 8")
+            break
+        if abs(d) > 0.5:
+            moved = True
+            break
+        if a.error != 0 or c.error != 0 or Tf > 70:
+            print("СТОП: ошибка или перегрев")
+            break
+finally:
+    tt = abs(c.input_torque)
+    while tt > 0.01:
+        tt -= 0.05
+        c.input_torque = max(tt, 0)
+        time.sleep(0.05)
+    c.input_torque = 0
+    c.config.enable_torque_mode_vel_limit = True
+    c.config.control_mode = 3
+    c.input_pos = a.encoder.pos_estimate
+    a.motor.config.current_lim = old_lim
+print("ТРОНУЛОСЬ" if moved else "НЕ ТРОНУЛОСЬ", "| LIM", LIM, "| state", a.current_state, "err", a.error, c.error)
+
+```
+**Как читать:**
+- `Iq` на последней строке должен быть примерно равен `LIM` (±10%). Если он ниже, тест недействителен и ступень не засчитывается.
+- `ТРОНУЛОСЬ`: запиши `Iq` в момент страгивания и иди на этап 5.
+- `НЕ ТРОНУЛОСЬ` на 20 А: ток выше не поднимаем. Проверяем по очереди: питание второй платы, мёртвая точка (обратная сторона и другой угол вала), знак момента, шины, Kt (`8,27/KV`), динамометр на ободе.
+- Любая ошибка, перегрев или горячий мотор: остановка, остывание, присылаешь вывод.
+
+## Этап 5. Рабочие значения
+
+Подставь `LIM_WORK` = ток страгивания + 2–3 А, не выше 20:
+```python
+# рабочий ток и потолок интегратора под него
+LIM_WORK = 15
+a = dev0.axis0
+a.motor.config.current_lim = LIM_WORK
+a.controller.config.vel_integrator_limit = round(0.04 * LIM_WORK - 0.16 + 0.01, 3)
+print(a.motor.config.current_lim, a.controller.config.vel_integrator_limit)
+
+```
+```python
+# проверка на земле, как будет делать ESP32 (≤3 с)
+import time
+a = dev0.axis0
+if a.current_state != 8:
+    dev0.clear_errors()
+    a.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    time.sleep(0.5)
+p0 = a.encoder.pos_estimate
+for i in range(10):
+    a.controller.input_pos = a.encoder.pos_estimate + 0.7
+    time.sleep(0.3)
+    print("dpos", round(a.encoder.pos_estimate - p0, 3), "Iq", round(a.motor.current_control.Iq_measured, 2), "T_fet", round(a.motor.fet_thermistor.temperature, 1), "state", a.current_state)
+a.controller.input_pos = a.encoder.pos_estimate
+print("state", a.current_state, "err", a.error, a.controller.error)
+
+```
+**Проверка:** колесо трогается за ≤1 с и идёт. Из-за `vel_limit 2` ожидай около 0,55–0,6 оборота за цикл, итого `dpos` около 6 из 7. Колесо стоит с растущим током означает, что не годится.
+
+Если трогается медленно, повышай по одному параметру и после каждого повторяй тест в воздухе (этап 2): `vel_integrator_gain` 0,08 → 0,15 → 0,3, затем `vel_gain` 0,08 → 0,12 → 0,15 (только без треска).
+
+## Этап 6. Фиксация
+
+Повтори блок сохранения из этапа 3, переподключись, сними снимок (этап 1) и сделай `backup-config ..._v2.json`. В `Config.h` оставь `MOTOR_GEAR_RATIO = 6.33f`, `TURN_STEP = 0.7f`.
+
+## Этап 7. ESP32: позиция и цель в телеметрии
+
+Правки из моего прошлого сообщения (Config.h, ODriveCAN.h, ODriveCAN.cpp, Telemetry.cpp). Применяем после этапа 6, затем проверка поворота от ESP32.
+
+## Этап 8. Вторая плата
+
+Те же этапы 0–6, значения не копировать вслепую.
+
+Начинай с этапов 0 и 1. Пришли вывод снимка (последний print — Vbus).
