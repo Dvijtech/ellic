@@ -70,11 +70,17 @@
     <option value="300">5 мин</option>
     <option value="0">всё</option>
   </select>
+  <input type="range" id="posSlider" min="0" max="1000" value="1000" step="1" style="display:none;width:200px" title="Положение окна по времени (Shift + колесо мыши — тоже)">
   <button id="pauseBtn" class="secondary">Пауза</button>
   <button id="clearBtn" class="secondary">Очистить</button>
   <button id="orderBtn" class="secondary" title="Вернуть исходный порядок строк">Порядок строк</button>
   <button id="xlsxBtn">Скачать Excel</button>
   <button id="rawBtn" class="secondary">Сохранить сырой лог</button>
+  <button id="openBtn" class="secondary" title="Открыть ранее сохранённый лог: Excel (.xlsx) из этого просмотрщика или сырой (.txt). Можно выбрать несколько частей сразу">Открыть лог</button>
+  <button id="layoutSaveBtn" class="secondary" title="Сохранить порядок строк в файл (порядок и так запоминается в браузере)">Сохранить раскладку</button>
+  <button id="layoutLoadBtn" class="secondary" title="Загрузить порядок строк из файла">Загрузить раскладку</button>
+  <input type="file" id="fileIn" multiple accept=".xlsx,.txt,.log" hidden>
+  <input type="file" id="layoutIn" accept=".json" hidden>
 </header>
 
 <div id="panel">
@@ -84,7 +90,8 @@
 
 <script>
 // <LOGIC>
-// ==================== Протокол v2 (ELLIC_telemetry_TZ.md) ====================
+// ==================== Протокол v3 (ELLIC_spec.md, раздел 13) ====================
+// Записи: M, L, R, E (как в v2) + D (система и состояние TWAI) + C (кадры ODrive по типам).
 const PERIOD_MS = 200;     // период пакетов прошивки (для склейки после перезагрузки)
 const MAX_COLS = 16000;    // столбцов в одном xlsx (лимит Excel 16384)
 
@@ -94,9 +101,10 @@ function def(id, name, group, kind, extra) {
   const v = Object.assign({ id, name, group, kind }, extra || {});
   VARS.push(v); VAR_BY_ID[id] = v;
 }
-const G_SHAFT = 'Вал и движение', G_L = 'Левое колесо', G_R = 'Правое колесо', G_E = 'Ошибки';
+const G_SHAFT = 'Вал и движение', G_L = 'Левое колесо', G_R = 'Правое колесо',
+      G_SYS = 'Система и CAN-контроллер', G_C = 'CAN-кадры ODrive по типам', G_E = 'Ошибки';
 
-// kind: num - линия; enum/bin/err/ok - статусы (дорожка из точек); cnt - ошибки (событий в пакете)
+// kind: num - линия; enum/bin/err/ok - статусы (дорожка из точек); cnt - счётчик событий в пакете
 def('raw',      'raw, °',            G_SHAFT, 'num');
 def('cont',     'cont, °',           G_SHAFT, 'num');
 def('delta',    'delta, °',          G_SHAFT, 'num');
@@ -107,6 +115,8 @@ def('mode',     'mode',              G_SHAFT, 'enum', { max: 2 });
 def('brakeL',   'тормоз L',          G_SHAFT, 'bin');
 def('brakeR',   'тормоз R',          G_SHAFT, 'bin');
 def('turn',     'TURN_ZONE',         G_SHAFT, 'bin');
+def('fire',     'fire (кнопка стрельбы)', G_SHAFT, 'bin');
+def('fireCount','fire_count (нажатий)',   G_SHAFT, 'num', { int: true });
 
 function defWheel(s, group) {
   def(s + '_iq',   s + ' iq, А',        group, 'num');
@@ -126,6 +136,27 @@ function defWheel(s, group) {
 defWheel('L', G_L);
 defWheel('R', G_R);
 
+// --- D: система и состояние TWAI
+def('uptime',  'uptime ESP, с',                 G_SYS, 'num', { int: true });
+def('reset',   'причина сброса ESP (reset)',    G_SYS, 'enum', { max: 15 });
+def('boots',   'запусков ESP (boot count)',     G_SYS, 'num', { int: true });
+def('prevUp',  'uptime пред. запуска, с',       G_SYS, 'num', { int: true });
+def('loopGap', 'loop: макс. интервал, мкс',     G_SYS, 'num', { int: true });
+def('sendUs',  'выдача пакета, мкс',            G_SYS, 'num', { int: true });
+def('asMax',   'AS5600 чтение макс, мкс',       G_SYS, 'num', { int: true });
+def('ageL',    'возраст позиции L макс, мс',    G_SYS, 'num', { int: true });
+def('ageR',    'возраст позиции R макс, мс',    G_SYS, 'num', { int: true });
+def('twai',    'TWAI состояние (0 стоп,1 раб,2 bus-off,3 восст.)', G_SYS, 'enum', { max: 3 });
+def('tec',     'TWAI TEC',                      G_SYS, 'num', { int: true });
+def('rec',     'TWAI REC',                      G_SYS, 'num', { int: true });
+
+// --- C: кадры ODrive по типам, принятые за период (норма: по 2 каждого типа при периоде 200 мс)
+const C_TYPES = ['hb', 'mot', 'enc', 'est', 'iq', 'vbus', 'ctrl'];
+const C_NAMES = ['Heartbeat 0x01', 'MotorErr 0x03', 'EncErr 0x04', 'Estimates 0x09', 'Iq 0x14', 'BusVI 0x17', 'CtrlErr 0x1D'];
+for (const s of ['L', 'R']) {
+  C_TYPES.forEach((t, i) => def('c' + s + '_' + t, 'кадры ' + s + ' ' + C_NAMES[i], G_C, 'cnt', { int: true }));
+}
+
 // Порядок полей записи E (после type,ts)
 const E_FIELDS = [
   ['e_as',    'ERR AS5600'],
@@ -138,19 +169,38 @@ const E_FIELDS = [
   ['e_Lctrl', 'ERR L ctrl'],    ['e_Rctrl', 'ERR R ctrl'],
 ];
 for (const [id, name] of E_FIELDS) def(id, name, G_E, 'cnt', { int: true });
+// Счётчики событий TWAI за период - приходят в записи D
+const D_ERR_FIELDS = [
+  ['e_rxMiss', 'TWAI rxMissed (очередь приёма)'],
+  ['e_arb',    'TWAI arbLost'],
+  ['e_busErr', 'TWAI busError'],
+  ['e_txHw',   'TWAI txFailedHw'],
+  ['e_busOff', 'TWAI bus-off recoveries'],
+];
+for (const [id, name] of D_ERR_FIELDS) def(id, name, G_E, 'cnt', { int: true });
 
 const ERR_CHARTS = [
   { title: 'вал и CAN', ids: ['e_as', 'e_Ltx', 'e_Rtx', 'e_Lstale', 'e_Rstale', 'e_Loff', 'e_Roff'],
     names: ['AS5600', 'L txFail', 'R txFail', 'L stale', 'R stale', 'L offline', 'R offline'] },
+  { title: 'TWAI шина', ids: D_ERR_FIELDS.map(x => x[0]),
+    names: ['rxMissed', 'arbLost', 'busError', 'txFailedHw', 'bus-off recov'] },
   { title: 'ODrive левый', ids: ['e_Laxis', 'e_Lmot', 'e_Lenc', 'e_Lctrl'],
     names: ['axis', 'motor', 'encoder', 'ctrl'] },
   { title: 'ODrive правый', ids: ['e_Raxis', 'e_Rmot', 'e_Renc', 'e_Rctrl'],
     names: ['axis', 'motor', 'encoder', 'ctrl'] },
 ];
+const FRAME_CHARTS = ['L', 'R'].map(s => ({
+  title: 'кадры ' + (s === 'L' ? 'левого' : 'правого') + ' ODrive',
+  ids: C_TYPES.map(t => 'c' + s + '_' + t),
+  names: C_NAMES,
+}));
 
 // ==================== Разбор строк ====================
 function num(s) { return (s === undefined || s === '') ? NaN : Number(s); }
 const HEX_RE = /^[0-9A-Fa-f]+$/;
+// D: порядок полей после type,ts
+const D_IDS = ['uptime', 'reset', 'boots', 'prevUp', 'loopGap', 'sendUs', 'asMax', 'twai', 'tec', 'rec',
+               'e_rxMiss', 'e_arb', 'e_busErr', 'e_txHw', 'e_busOff', 'ageL', 'ageR'];
 
 function parseRecord(line) {
   const f = line.split(',');
@@ -160,8 +210,9 @@ function parseRecord(line) {
   const vals = {};
 
   if (type === 'M') {
-    // M,ts,raw,cont,delta,valDelta,mode,flags,leftWheelDelta,rightWheelDelta
-    if (f.length !== 10) return null;
+    // M,ts,raw,cont,delta,valDelta,mode,flags,leftWheelDelta,rightWheelDelta[,fire,fire_count]
+    // (10 полей - логи прошивок без кнопки стрельбы, 12 - с кнопкой)
+    if (f.length !== 10 && f.length !== 12) return null;
     const n = f.slice(2).map(num);
     if (n.some(x => !Number.isFinite(x))) return null;
     vals.raw = n[0]; vals.cont = n[1]; vals.delta = n[2]; vals.valDelta = n[3];
@@ -171,6 +222,7 @@ function parseRecord(line) {
     vals.brakeR = (fl & 2) ? 1 : 0;
     vals.turn   = (fl & 4) ? 1 : 0;
     vals.lwd = n[6]; vals.rwd = n[7];
+    if (f.length === 12) { vals.fire = n[8] ? 1 : 0; vals.fireCount = n[9]; }
   } else if (type === 'L' || type === 'R') {
     // L,ts,online,state,traj,iq,vel,vbus,ibus,axisErr,motorErr,encErr,ctrlErr,tx,rx
     if (f.length !== 15) return null;
@@ -199,6 +251,24 @@ function parseRecord(line) {
       if (!Number.isFinite(x)) return null;
       vals[E_FIELDS[i][0]] = x;
     }
+  } else if (type === 'D') {
+    // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,twaiState,tec,rec,
+    //   rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR
+    if (f.length !== 2 + D_IDS.length) return null;
+    for (let i = 0; i < D_IDS.length; i++) {
+      const x = num(f[2 + i]);
+      if (!Number.isFinite(x)) return null;
+      vals[D_IDS[i]] = x;
+    }
+  } else if (type === 'C') {
+    // C,ts, L[hb,mot,enc,est,iq,vbus,ctrl], R[то же] - кадры за период
+    if (f.length !== 2 + 2 * C_TYPES.length) return null;
+    for (let i = 0; i < 2 * C_TYPES.length; i++) {
+      const x = num(f[2 + i]);
+      if (!Number.isFinite(x)) return null;
+      const s = i < C_TYPES.length ? 'L' : 'R';
+      vals['c' + s + '_' + C_TYPES[i % C_TYPES.length]] = x;
+    }
   } else {
     return null;
   }
@@ -207,7 +277,7 @@ function parseRecord(line) {
 
 // ==================== Хранилище ====================
 // cols: один элемент на пакет (= столбец Excel): { ts, t, v:{id:значение} }
-// Записи M/L/R/E с одинаковым ts попадают в один столбец.
+// Записи M/L/R/E/D/C с одинаковым ts попадают в один столбец.
 const store = {};
 function resetStore() {
   store.cols = [];
@@ -228,6 +298,7 @@ resetStore();
 function feedLine(line) {
   line = line.trim();
   if (!line) return false;
+  if (line.charAt(0) === '#') return false; // служебные строки прошивки (баннер при старте)
   const rec = parseRecord(line);
   if (!rec) { store.bad++; return false; }
   store.raw.push(line);
@@ -351,10 +422,11 @@ function xmlEsc(s) {
 }
 
 // Лист: строка 1 - время (с) от начала записи; дальше по строке на переменную,
-// порядок = порядок VARS (вал/движение, левое, правое, ошибки внизу).
-function buildSheetXml(cols) {
+// порядок = порядок VARS (вал/движение, левое, правое, система, кадры, ошибки внизу).
+function buildSheetXml(cols, vars) {
+  vars = vars || VARS;
   const nCols = cols.length + 1;
-  const nRows = VARS.length + 1;
+  const nRows = vars.length + 1;
   const parts = [];
   parts.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
   parts.push('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">');
@@ -371,8 +443,8 @@ function buildSheetXml(cols) {
   row.push('</row>');
   parts.push(row.join(''));
 
-  for (let i = 0; i < VARS.length; i++) {
-    const v = VARS[i];
+  for (let i = 0; i < vars.length; i++) {
+    const v = vars[i];
     const r = i + 2;
     row = ['<row r="' + r + '"><c r="A' + r + '" t="inlineStr"><is><t>' + xmlEsc(v.name) + '</t></is></c>'];
     for (let j = 0; j < cols.length; j++) {
@@ -389,7 +461,7 @@ function buildSheetXml(cols) {
   return parts.join('');
 }
 
-async function buildXlsx(cols) {
+async function buildXlsx(cols, vars) {
   const enc = new TextEncoder();
   const files = [
     { name: '[Content_Types].xml', data: enc.encode(
@@ -414,17 +486,108 @@ async function buildXlsx(cols) {
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
       '</Relationships>') },
-    { name: 'xl/worksheets/sheet1.xml', data: enc.encode(buildSheetXml(cols)) },
+    { name: 'xl/worksheets/sheet1.xml', data: enc.encode(buildSheetXml(cols, vars)) },
   ];
   return buildZip(files);
 }
 
+// ==================== Чтение .xlsx, сохранённого этим просмотрщиком ====================
+async function inflateRaw(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function readZip(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let e = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 66000); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  }
+  if (e < 0) throw new Error('это не zip/xlsx');
+  const count = dv.getUint16(e + 10, true);
+  let p = dv.getUint32(e + 16, true);
+  const dec = new TextDecoder('utf-8'), out = {};
+  for (let k = 0; k < count; k++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true), elen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nlen));
+    const dstart = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+    out[name] = { method, data: u8.subarray(dstart, dstart + csize) };
+    p += 46 + nlen + elen + clen;
+  }
+  return {
+    async text(name) {
+      const f = out[name]; if (!f) return null;
+      const bytes = f.method === 8 ? await inflateRaw(f.data) : f.data;
+      return dec.decode(bytes);
+    }
+  };
+}
+function colIndexOf(ref) { // "AB12" -> 28
+  let n = 0;
+  for (const ch of ref) { const c = ch.charCodeAt(0); if (c < 65 || c > 90) break; n = n * 26 + (c - 64); }
+  return n;
+}
+const NAME_TO_ID = {};
+for (const v of VARS) NAME_TO_ID[v.name.trim()] = v.id;
+
+// Возвращает массив столбцов { ts, t, v } из xlsx, выгруженного этим просмотрщиком
+// (строка 1 - время, столбец A - имена переменных). Имена сопоставляются с VARS.
+async function parseXlsxCols(buf) {
+  const zip = await readZip(buf);
+  const sheetXml = await zip.text('xl/worksheets/sheet1.xml');
+  if (!sheetXml) throw new Error('в файле нет листа с данными');
+  const sst = [];
+  const sstXml = await zip.text('xl/sharedStrings.xml');
+  if (sstXml) {
+    const d = new DOMParser().parseFromString(sstXml, 'application/xml');
+    for (const si of d.getElementsByTagName('si')) sst.push(Array.from(si.getElementsByTagName('t')).map(t => t.textContent).join(''));
+  }
+  const doc = new DOMParser().parseFromString(sheetXml, 'application/xml');
+  const cellVal = c => {
+    const t = c.getAttribute('t');
+    if (t === 'inlineStr') return Array.from(c.getElementsByTagName('t')).map(x => x.textContent).join('');
+    const vEl = c.getElementsByTagName('v')[0];
+    if (!vEl) return undefined;
+    if (t === 's') return sst[Number(vEl.textContent)];
+    if (t === 'str') return vEl.textContent;
+    const x = Number(vEl.textContent);
+    return Number.isFinite(x) ? x : undefined;
+  };
+  const byIdx = new Map();
+  let first = true;
+  for (const row of doc.getElementsByTagName('row')) {
+    const cells = Array.from(row.getElementsByTagName('c'));
+    if (first) {
+      first = false;
+      for (const c of cells) {
+        const ci = colIndexOf(c.getAttribute('r') || '');
+        if (ci < 2) continue;
+        const t = cellVal(c);
+        if (typeof t === 'number') byIdx.set(ci, { ts: t * 1000, t, v: {} });
+      }
+      continue;
+    }
+    let id = null;
+    for (const c of cells) {
+      const ci = colIndexOf(c.getAttribute('r') || '');
+      if (ci === 1) { const nm = cellVal(c); id = (typeof nm === 'string') ? NAME_TO_ID[nm.trim()] : null; if (!id) break; continue; }
+      const col = byIdx.get(ci);
+      if (!col) continue;
+      const x = cellVal(c);
+      if (x !== undefined) col.v[id] = x;
+    }
+  }
+  return Array.from(byIdx.keys()).sort((a, b) => a - b).map(k => byIdx.get(k));
+}
+
 // ==================== Демо-генератор (без железа) ====================
-// Выдаёт строки ровно в формате прошивки.
+// Выдаёт строки ровно в формате прошивки. Между тиками 100-150 и 300-316 -
+// имитация "потери данных позиции" и offline правого ODrive.
 function makeDemo() {
   let ts = 12000, k = 0, ang = 40;
-  let cont = 0, lastR = null;
-  const hex = x => x.toString(16).toUpperCase();
+  let cont = 0, lastR = null, demoFirePrev = 0, demoFireCount = 0;
   return function tick() {
     k++; ts += PERIOD_MS;
     const speed = 20 + 18 * Math.sin(k / 35);
@@ -435,45 +598,64 @@ function makeDemo() {
     if (bl && br) mode = 1; else if (bl || br) mode = turnZone ? 2 : 1;
     const valDelta = speed * 1.5;
     let lw = 0, rw = 0;
-    if (mode === 0) { lw = valDelta * 6.4 / 360; rw = -lw; }
-    else if (mode === 2) { if (bl) rw = -1.0; else lw = 1.0; }
+    if (mode === 0) { lw = valDelta * 6.33 / 360; rw = -lw; }
+    else if (mode === 2) { if (bl) rw = -0.7; else lw = 0.7; }
     const flags = (bl ? 1 : 0) | (br ? 2 : 0) | (turnZone ? 4 : 0);
+    const stall = (k >= 100 && k < 150);   // позиция "протухла": нет кадров 0x09/0x14/0x17
     const lines = [];
+    const fireNow = (k % 70) > 62 ? 1 : 0;                       // демо: нажатия кнопки стрельбы
+    if (fireNow && !demoFirePrev) demoFireCount++;
+    demoFirePrev = fireNow;
     lines.push(['M', ts, ang.toFixed(1), cont.toFixed(1), speed.toFixed(2), valDelta.toFixed(2),
-                mode, flags, lw.toFixed(3), rw.toFixed(3)].join(','));
+                mode, flags, lw.toFixed(3), rw.toFixed(3), fireNow, demoFireCount].join(','));
 
     const rOff = k >= 300 && k < 316;
     const axisErr = (k >= 180 && k < 200) ? '40' : '0';
+    const cmdTx = (k % 3 === 0) && !stall ? 1 : 0;
     const L = [ 'L', ts, 1, 8, mode === 1 ? 1 : 0,
       (1.8 * Math.sin(k / 9) + (Math.random() - .5) * .2).toFixed(2),
-      (speed * 6.4 / 360 * 3).toFixed(3),
+      (speed * 6.33 / 360 * 3).toFixed(3),
       (24 + (Math.random() - .5) * .2).toFixed(2),
       (0.6 + 0.3 * Math.sin(k / 9)).toFixed(2),
-      axisErr, '0', '0', '0', (k % 3) ? 1 : 0, 14 ];
+      axisErr, '0', '0', '0', cmdTx, stall ? 3 : 14 ];
     lines.push(L.join(','));
     let R;
     if (rOff && lastR) { R = lastR.slice(); R[0] = 'R'; R[1] = ts; R[2] = 0; R[13] = 0; R[14] = 0; }
     else {
       R = [ 'R', ts, 1, 8, mode === 1 ? 1 : 0,
         (-1.6 * Math.sin(k / 9) + (Math.random() - .5) * .2).toFixed(2),
-        (-speed * 6.4 / 360 * 3).toFixed(3),
+        (-speed * 6.33 / 360 * 3).toFixed(3),
         (24 + (Math.random() - .5) * .2).toFixed(2),
         (0.5 + 0.3 * Math.sin(k / 9)).toFixed(2),
-        '0', '0', '0', '0', (k % 3) ? 1 : 0, 14 ];
+        '0', '0', '0', '0', cmdTx, stall ? 2 : 14 ];
       lastR = R;
     }
     lines.push(R.join(','));
 
+    const staleNow = (stall && k % 3 === 0) ? 1 : 0;
     const e = {
       as: (k % 97 === 0 ? 1 : 0) + (k === 55 ? 2 : 0),
       Ltx: k % 211 === 0 ? 1 : 0, Rtx: 0,
-      Lstale: 0, Rstale: rOff ? 1 : 0,
+      Lstale: staleNow, Rstale: rOff ? 1 : staleNow,
       Loff: 0, Roff: k === 300 ? 1 : 0,
       Laxis: k === 180 ? 1 : 0, Raxis: 0,
       Lmot: 0, Rmot: 0, Lenc: 0, Renc: 0, Lctrl: 0, Rctrl: 0,
     };
     lines.push(['E', ts, e.as, e.Ltx, e.Rtx, e.Lstale, e.Rstale, e.Loff, e.Roff,
                 e.Laxis, e.Raxis, e.Lmot, e.Rmot, e.Lenc, e.Renc, e.Lctrl, e.Rctrl].join(','));
+
+    // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,twaiState,tec,rec,
+    //   rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR
+    const gap = 1200 + Math.round(Math.random() * 800) + (k === 220 ? 350000 : 0);
+    const age = stall ? 400 + Math.round(Math.random() * 300) : 40 + Math.round(Math.random() * 60);
+    lines.push(['D', ts, Math.round(ts / 1000), 3, 2, 412, gap, 4800 + Math.round(Math.random() * 600),
+                1250 + Math.round(Math.random() * 120), 1, 0, 0,
+                stall ? 5 : 0, 0, stall ? 2 : 0, 0, 0, age, age].join(','));
+
+    // C,ts, L[hb,mot,enc,est,iq,vbus,ctrl], R[...] - по 2 кадра каждого типа за период 200 мс
+    const full = [2, 2, 2, 2, 2, 2, 2], part = [2, 2, 2, 0, 0, 0, 2];
+    const cc = stall ? part : full;
+    lines.push(['C', ts].concat(cc, rOff ? [0, 0, 0, 0, 0, 0, 0] : cc).join(','));
     return lines;
   };
 }
@@ -498,30 +680,94 @@ const H_GROUP = 24, H_LINE = 54, H_LANE = 26;
 
 const ITEMS = {}, DEFAULT_ORDER = [];
 function addItem(it) { ITEMS[it.key] = it; DEFAULT_ORDER.push(it.key); }
-for (const g of [G_SHAFT, G_L, G_R]) {
-  addItem({ key: 'g:' + g, type: 'group', title: g, h: H_GROUP });
-  for (const v of VARS.filter(v => v.group === g && v.kind === 'num')) addItem({ key: v.id, type: 'line', v, h: H_LINE });
-  for (const v of VARS.filter(v => v.group === g && v.kind !== 'num')) addItem({ key: v.id, type: 'lane', v, h: H_LANE });
+
+// Порядок по умолчанию: сначала показатель, внутри него сначала правое, потом левое.
+const SECTIONS = [
+  ['Скорость колёс',            ['R_vel', 'L_vel']],
+  ['Вал',                       ['raw', 'cont', 'delta', 'valDelta']],
+  ['Приращения колёс',          ['rwd', 'lwd']],
+  ['Ток мотора Iq',             ['R_iq', 'L_iq']],
+  ['Ток шины Ibus',             ['R_ibus', 'L_ibus']],
+  ['Режим, тормоза, зона',      ['mode', 'brakeR', 'brakeL', 'turn']],
+  ['Кнопка стрельбы',           ['fire', 'fireCount']],
+  ['Напряжение шины Vbus',      ['R_vbus', 'L_vbus']],
+  ['Кадры за период (tx / rx)', ['R_rx', 'L_rx', 'R_tx', 'L_tx']],
+  ['Состояние ODrive',          ['R_online', 'L_online', 'R_state', 'L_state', 'R_traj', 'L_traj']],
+  ['Коды ошибок ODrive',        ['R_axisErr', 'L_axisErr', 'R_motorErr', 'L_motorErr', 'R_encErr', 'L_encErr', 'R_ctrlErr', 'L_ctrlErr']],
+  [G_SYS,                       ['uptime', 'reset', 'boots', 'prevUp', 'loopGap', 'sendUs', 'asMax', 'ageR', 'ageL', 'twai', 'tec', 'rec']],
+];
+const _covered = new Set();
+function addVarItem(v) { addItem({ key: v.id, type: v.kind === 'num' ? 'line' : 'lane', v, h: v.kind === 'num' ? H_LINE : H_LANE }); }
+for (const [title, ids] of SECTIONS) {
+  addItem({ key: 'g:' + title, type: 'group', title, h: H_GROUP });
+  for (const id of ids) { const v = VAR_BY_ID[id]; if (v) { addVarItem(v); _covered.add(id); } }
 }
+// всё, что не попало в разделы выше (и не является счётчиком событий), - в конец
+const _rest = VARS.filter(v => v.kind !== 'cnt' && !_covered.has(v.id));
+if (_rest.length) { addItem({ key: 'g:rest', type: 'group', title: 'Прочее', h: H_GROUP }); for (const v of _rest) addVarItem(v); }
+addItem({ key: 'g:frames', type: 'group', title: G_C + ' · за период', h: H_GROUP });
+for (const c of FRAME_CHARTS) addItem({ key: 'err:' + c.title, type: 'errs', chart: c, h: Math.max(72, 24 + c.ids.length * 14) });
 addItem({ key: 'g:err', type: 'group', title: 'Ошибки · событий в пакете', h: H_GROUP });
 for (const c of ERR_CHARTS) addItem({ key: 'err:' + c.title, type: 'errs', chart: c, h: Math.max(72, 24 + c.ids.length * 14) });
 
 // Порядок строк (меняется перетаскиванием за левый край, запоминается в браузере).
-const ORDER_KEY = 'ellic.rowOrder.v1';
+const ORDER_KEY = 'ellic.rowOrder.v3';
+const WIN_KEY = 'ellic.window.v1';
+// Сохранённый порядок + строки, которых в нём ещё нет (например, добавленные в новой версии):
+// такие строки встают после своего соседа по порядку по умолчанию, а не в самый конец.
+function mergeOrder(saved) {
+  const seen = new Set(), out = [];
+  for (const k of saved) if (ITEMS[k] && !seen.has(k)) { seen.add(k); out.push(k); }
+  DEFAULT_ORDER.forEach((k, i) => {
+    if (seen.has(k)) return;
+    let at = 0;
+    for (let j = i - 1; j >= 0; j--) { const idx = out.indexOf(DEFAULT_ORDER[j]); if (idx >= 0) { at = idx + 1; break; } }
+    out.splice(at, 0, k); seen.add(k);
+  });
+  return out;
+}
 function loadOrder() {
   try {
     const saved = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
-    if (Array.isArray(saved)) {
-      const seen = new Set(), out = [];
-      for (const k of saved) if (ITEMS[k] && !seen.has(k)) { seen.add(k); out.push(k); }
-      for (const k of DEFAULT_ORDER) if (!seen.has(k)) out.push(k);
-      return out;
-    }
+    if (Array.isArray(saved)) return mergeOrder(saved);
   } catch (e) {}
   return DEFAULT_ORDER.slice();
 }
 function saveOrder() { try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch (e) {} }
 let order = loadOrder();
+
+// Порядок переменных для Excel = порядок строк на экране (графики ошибок разворачиваются в свои счётчики).
+function exportVars() {
+  const out = [], seen = new Set();
+  const add = v => { if (v && !seen.has(v.id)) { seen.add(v.id); out.push(v); } };
+  for (const k of order) {
+    const it = ITEMS[k];
+    if (!it) continue;
+    if (it.v) add(it.v);
+    else if (it.chart) for (const id of it.chart.ids) add(VAR_BY_ID[id]);
+  }
+  for (const v of VARS) add(v);
+  return out;
+}
+
+// Раскладка в файл / из файла (на случай, если браузер не хранит localStorage для локального файла).
+function layoutToFile() {
+  const data = { app: 'ELLIC telemetry viewer', version: 3, order, window: win };
+  download(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }), 'ellic_layout.json');
+}
+function applyLayout(data) {
+  if (!data || !Array.isArray(data.order)) throw new Error('в файле нет порядка строк');
+  order = mergeOrder(data.order); saveOrder();
+  if (data.window !== undefined && [0, 30, 60, 300].includes(Number(data.window))) {
+    win = Number(data.window); $('winSel').value = String(win); saveWin(); updateSlider();
+  }
+  markDirty();
+}
+function loadWin() {
+  try { const w = Number(localStorage.getItem(WIN_KEY)); if ([0, 30, 60, 300].includes(w) && localStorage.getItem(WIN_KEY) !== null) return w; } catch (e) {}
+  return 60;
+}
+function saveWin() { try { localStorage.setItem(WIN_KEY, String(win)); } catch (e) {} }
 
 // Раскладка: если идёт перетаскивание, на месте target оставляется зазор.
 function layoutOf(ord, dragKey, target) {
@@ -536,7 +782,7 @@ function layoutOf(ord, dragKey, target) {
 }
 
 // ---- состояние вида
-let win = 60, paused = false, pausedEnd = 0;
+let win = loadWin(), paused = false, pausedEnd = 0, fileMode = false;
 let hoverX = null;
 let pending = false;
 let drag = null, curLayout = null, lastClientY = 0, dragTimer = null;
@@ -937,7 +1183,7 @@ function download(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
 }
 async function exportXlsx(cols, part) {
-  const bytes = await buildXlsx(cols);
+  const bytes = await buildXlsx(cols, exportVars());
   download(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
            'ELLIC_' + stamp() + '_part' + part + '.xlsx');
 }
@@ -973,6 +1219,7 @@ const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const CHAR_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
 async function connect() {
+  if (fileMode) { exitFileMode(); resetStore(); markDirty(); }
   try {
     bleDevice = await navigator.bluetooth.requestDevice({
       filters: [{ services: [SERVICE_UUID] }], optionalServices: [SERVICE_UUID]
@@ -1004,15 +1251,17 @@ function stopDemo() {
   demoBtn.textContent = 'Демо'; demoBtn.classList.remove('active');
   setStatus(false);
 }
-function clearAll() { resetStore(); rxBuffer = ''; paused = false; pauseBtn.classList.remove('active'); pauseBtn.textContent = 'Пауза'; setNote(''); markDirty(); }
+function clearAll() { exitFileMode(); resetStore(); rxBuffer = ''; paused = false; pauseBtn.classList.remove('active'); pauseBtn.textContent = 'Пауза'; setNote(''); markDirty(); }
 
 connectBtn.addEventListener('click', connect);
 disconnectBtn.addEventListener('click', disconnect);
 demoBtn.addEventListener('click', () => demoTimer ? stopDemo() : startDemo());
 clearBtn.addEventListener('click', clearAll);
 $('orderBtn').addEventListener('click', () => { order = DEFAULT_ORDER.slice(); saveOrder(); markDirty(); });
-$('winSel').addEventListener('change', e => { win = Number(e.target.value); markDirty(); });
+$('winSel').value = String(win);
+$('winSel').addEventListener('change', e => { win = Number(e.target.value); saveWin(); updateSlider(); markDirty(); });
 pauseBtn.addEventListener('click', () => {
+  if (fileMode) return;
   paused = !paused;
   if (paused) { const n = store.cols.length; pausedEnd = n ? store.cols[n - 1].t : 0; }
   pauseBtn.classList.toggle('active', paused);
@@ -1031,9 +1280,94 @@ rawBtn.addEventListener('click', () => {
 });
 
 setInterval(() => {
+  if (fileMode) { statsEl.textContent = ''; return; }
   const n = store.cols.length;
   statsEl.textContent = n ? ('пакетов ' + n + ' · ' + store.cols[n - 1].t.toFixed(1) + ' с' + (store.bad ? ' · ошибок разбора ' + store.bad : '')) : '';
 }, 500);
+
+// ---- просмотр сохранённых логов
+const posSlider = $('posSlider');
+function lastT() { const n = store.cols.length; return n ? store.cols[n - 1].t : 0; }
+function updateSlider() {
+  const show = fileMode && win > 0 && lastT() > win;
+  posSlider.style.display = show ? '' : 'none';
+  if (!fileMode) return;
+  if (win === 0) { pausedEnd = lastT(); }
+  else {
+    const tmin = Math.min(win, lastT());
+    pausedEnd = Math.max(tmin, Math.min(pausedEnd || lastT(), lastT()));
+    const span = lastT() - tmin;
+    posSlider.value = span > 0 ? String(Math.round((pausedEnd - tmin) / span * 1000)) : '1000';
+  }
+}
+posSlider.addEventListener('input', () => {
+  const tmin = Math.min(win, lastT()), span = lastT() - tmin;
+  pausedEnd = tmin + Number(posSlider.value) / 1000 * span;
+  markDirty();
+});
+panel.addEventListener('wheel', e => {
+  if (!fileMode || !e.shiftKey || win === 0) return;
+  e.preventDefault();
+  const d = (e.deltaY || e.deltaX) > 0 ? 1 : -1;
+  pausedEnd = Math.max(Math.min(win, lastT()), Math.min(lastT(), pausedEnd + d * win * 0.1));
+  updateSlider(); markDirty();
+}, { passive: false });
+
+function exitFileMode() {
+  fileMode = false;
+  if (typeof posSlider !== 'undefined') posSlider.style.display = 'none';
+  pauseBtn.disabled = false;
+}
+function enterFileMode(label) {
+  fileMode = true; paused = true;
+  pauseBtn.classList.remove('active'); pauseBtn.textContent = 'Пауза'; pauseBtn.disabled = true;
+  win = 0; $('winSel').value = '0';           // сразу показываем весь лог целиком
+  pausedEnd = lastT();
+  updateSlider();
+  statusDot.classList.remove('on');
+  statusText.textContent = 'просмотр файла · ' + label;
+  markDirty();
+}
+async function openFiles(files) {
+  if (!files.length) return;
+  if (bleDevice && bleDevice.gatt.connected) disconnect();
+  if (demoTimer) stopDemo();
+  resetStore(); rxBuffer = '';
+  const list = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  setNote('чтение файлов…');
+  try {
+    for (const f of list) {
+      if (/\.xlsx$/i.test(f.name)) {
+        const cols = await parseXlsxCols(await f.arrayBuffer());
+        if (!cols.length) throw new Error(f.name + ': нет данных');
+        let shift = 0;
+        const prev = store.cols[store.cols.length - 1];
+        if (prev && cols[0].t <= prev.t) shift = prev.t + PERIOD_MS / 1000 - cols[0].t;   // части подряд
+        for (const c of cols) { c.t += shift; c.ts = c.t * 1000; store.cols.push(c); }
+        if (store.t0 === null) { store.t0 = 0; store.startWall = new Date(); }
+      } else {
+        const text = await f.text();
+        for (const line of text.split(/\r?\n/)) feedLine(line);
+      }
+    }
+    if (!store.cols.length) throw new Error('в файлах не найдено данных ELLIC');
+    for (const c of store.cols) Object.assign(store.latest, c.v);
+    enterFileMode(list.length === 1 ? list[0].name : list.length + ' файла(ов)');
+    setNote('пакетов ' + store.cols.length + ' · ' + lastT().toFixed(1) + ' с');
+  } catch (err) {
+    setNote('не удалось открыть: ' + err.message);
+  }
+}
+$('openBtn').addEventListener('click', () => $('fileIn').click());
+$('fileIn').addEventListener('change', e => { const f = e.target.files; openFiles(f).then(() => { e.target.value = ''; }); });
+$('layoutSaveBtn').addEventListener('click', layoutToFile);
+$('layoutLoadBtn').addEventListener('click', () => $('layoutIn').click());
+$('layoutIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try { applyLayout(JSON.parse(await f.text())); setNote('раскладка загружена'); }
+  catch (err) { setNote('не удалось прочитать раскладку: ' + err.message); }
+});
 
 setStatus(false);
 if (!navigator.bluetooth) setNote('Web Bluetooth недоступен (нужен Chrome/Edge) — можно посмотреть «Демо»');
