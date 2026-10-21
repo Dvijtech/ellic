@@ -7,9 +7,11 @@ Encoder::Encoder()
       _initialized(false),
       _previousRawAngle(0.0f),
       _continuousAngle(0.0f),
-      
       _lastDelta(0.0f),
-      _readErrors(0) {}
+      _readErrors(0),
+      _hasRead(false),
+      _lastReadMs(0),
+      _readMaxUs(0) {}
 
 void Encoder::begin(Telemetry* telemetry) {
     _telemetry = telemetry;
@@ -18,6 +20,9 @@ void Encoder::begin(Telemetry* telemetry) {
     _continuousAngle = 0.0f;
     _lastDelta = 0.0f;
     _readErrors = 0;
+    _hasRead = false;
+    _lastReadMs = 0;
+    _readMaxUs = 0;
 }
 
 // Чтение 12-битного RAW ANGLE регистра AS5600 (0x0C/0x0D) -> градусы 0..360.
@@ -44,10 +49,26 @@ bool Encoder::readRawAngleDeg(float &outDeg) {
 }
 
 void Encoder::update() {
+    // Раздел 6.1: датчик опрашивается раз в ENCODER_PERIOD_MS, а не на каждом
+    // проходе loop() - меньше трафика на I2C и больше времени на приём CAN.
+    uint32_t nowMs = millis();
+    if (_hasRead && (nowMs - _lastReadMs) < ENCODER_PERIOD_MS) {
+        return;
+    }
+    _hasRead = true;
+    _lastReadMs = nowMs;
+
     float raw;
-    if (!readRawAngleDeg(raw)) {
+    uint32_t t0 = micros();
+    bool ok = readRawAngleDeg(raw);
+    uint32_t dur = micros() - t0;
+    if (dur > _readMaxUs) {
+        _readMaxUs = dur;
+    }
+
+    if (!ok) {
         // Раздел 6.3: continuousAngle и previousRawAngle НЕ обновляются,
-        // функция(снапшот) продолжает отдавать последнее валидное значение.
+        // снапшот продолжает отдавать последнее валидное значение.
         _readErrors++;
         return;
     }
@@ -79,5 +100,10 @@ EncoderSnapshot Encoder::getSnapshot() const {
     s.continuousAngle = _continuousAngle;
     s.lastDelta = _lastDelta;
     s.readErrors = _readErrors;
+    s.readMaxUs = _readMaxUs;
     return s;
+}
+
+void Encoder::resetPeriodStats() {
+    _readMaxUs = 0;
 }

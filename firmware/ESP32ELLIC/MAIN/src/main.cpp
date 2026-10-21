@@ -6,6 +6,7 @@
 #include "ODriveCAN.h"
 #include "Telemetry.h"
 #include "BleTelemetry.h"
+#include "FireButton.h"
 // #include "EllicVRButton.h"
 // ВАЖНО: EllicVRButton (BleGamepad) и BleTelemetry - оба поднимают BLE-стек
 // на ESP32. Пока EllicVRButton закомментирован, конфликта нет. Если его
@@ -21,16 +22,16 @@ ODriveCAN odriveCAN;
 
 Telemetry telemetry(&encoder, &motionController, &odriveCAN);
 BleTelemetry bleTelemetry;
+FireButton fireButton;
 
 // EllicVRButton vrButton("ELLIC VR Gamepad", 18);
 
 uint32_t lastControlMs = 0;
+uint32_t prevLoopStartUs = 0;
 
 void setup() {
-    
-    /// WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // ВРЕМЕННО: отключает brownout-детектор
-
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUD);
+    Serial.printf("# ELLIC firmware %s, serial %lu baud\n", FW_VERSION, (unsigned long)SERIAL_BAUD);
 
     Wire.begin(AS5600_SDA_PIN, AS5600_SCL_PIN);
     Wire.setClock(AS5600_I2C_CLOCK_HZ);
@@ -40,32 +41,52 @@ void setup() {
 
     telemetry.begin();
 
+    fireButton.begin();
+    telemetry.setFireButton(&fireButton);
+
     encoder.begin(&telemetry);
     motionController.begin();
 
     odriveCAN.setTelemetry(&telemetry);
     odriveCAN.begin();
 
-    /// delay(5000); // диагностическая пауза перед стартом BLE    
-    
     bleTelemetry.begin("ELLIC Telemetry");
     telemetry.setBleTelemetry(&bleTelemetry);
 
     // vrButton.begin();
 
-    // Раздел 10.1/10.2: явная ASCII-конфигурация ODrive из ESP32 не
-    // выполняется. При работе по CAN она не предусмотрена в принципе -
-    // соответствующего метода в ODriveCAN намеренно нет.
+    // Раздел 10: явная конфигурация ODrive из ESP32 не выполняется.
+    // Параметры ODrive сохранены в самих платах (odrivetool).
 
     lastControlMs = millis();
 }
 
 void loop() {
-    // Раздел 11: encoder.update() - на каждом проходе, без периода.
+    // Интервал между началами проходов loop() - для диагностики (запись D):
+    // единичные длинные интервалы означают, что что-то блокировало loop().
+    uint32_t loopStartUs = micros();
+    if (prevLoopStartUs != 0) {
+        telemetry.noteLoopGap(loopStartUs - prevLoopStartUs);
+    }
+    prevLoopStartUs = loopStartUs;
+
+    // Кнопка стрельбы (раздел 13.2): состояние и счётчик уходят в периодическом
+    // пакете; немедленная выдача включается флагом FIRE_SEND_IMMEDIATE.
+    bool fireChanged = fireButton.update();
+#if FIRE_SEND_IMMEDIATE
+    if (fireChanged) {
+        telemetry.sendFireEvent();
+    }
+#else
+    (void)fireChanged;
+#endif
+
+    // Раздел 11: энкодер опрашивается не чаще ENCODER_PERIOD_MS (внутри update()).
     encoder.update();
 
-    // Раздел 14.1: приём CAN-кадров и обновление кэша/online-статуса
-    // выполняется на каждом проходе loop(), не блокируясь телеметрией.
+    // Раздел 12.1: приём CAN-кадров, обновление кэша/online-статуса и
+    // контроль состояния TWAI - на каждом проходе loop(), не блокируясь
+    // телеметрией.
     odriveCAN.update();
 
     // Обслуживает переподключения BLE-клиента телеметрии.
@@ -85,13 +106,13 @@ void loop() {
         motionController.update(encSnap.rawAngle, encSnap.continuousAngle,
                                  leftBrake, rightBrake);
 
-        // Раздел 9/14.2: дальше каналы независимы - недоступная/устаревшая
+        // Раздел 9: дальше каналы независимы - недоступная/устаревшая
         // позиция одного колеса не блокирует отправку команды другому.
         odriveCAN.moveLeftWheel(motionController.getLeftWheelDelta());
         odriveCAN.moveRightWheel(motionController.getRightWheelDelta());
     }
 
-    // Раздел 12: телеметрия - собственные периоды collect()/printScheduled().
+    // Раздел 13: телеметрия - собственный период TELEMETRY_PERIOD_MS.
     telemetry.update();
 
     // vrButton.update();

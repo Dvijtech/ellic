@@ -22,7 +22,7 @@ const char* CHAR_RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // клиен
 // (PRO_CPU), чтобы даже долгий notify() не отнимал время у ядра,
 // на котором крутится управление моторами.
 const BaseType_t BLE_TASK_CORE = 0;
-const uint32_t   BLE_TASK_STACK_SIZE = 4096;
+const uint32_t   BLE_TASK_STACK_SIZE = 6144; // в стеке лежит QueueItem (~0.8 КБ)
 const UBaseType_t BLE_TASK_PRIORITY = 1; // ниже приоритета обычных Arduino-задач по умолчанию
 } // namespace
 
@@ -53,8 +53,6 @@ BleTelemetry::BleTelemetry()
 void BleTelemetry::begin(const char* deviceName) {
     BLEDevice::init(deviceName);
 
-    /// BLEDevice::setPower(ESP_PWR_LVL_N12); // минимальная мощность TX - снижает пиковый ток
-
     BLEDevice::setMTU(247); // запрашиваем увеличенный MTU у клиента, чтобы
                              // строки телеметрии не резались на 20 байт
 
@@ -80,9 +78,8 @@ void BleTelemetry::begin(const char* deviceName) {
     advertising->setScanResponse(true);
     advertising->start();
 
-    // Очередь строк на отправку + отдельная задача, которая их реально шлёт
-    // через notify(). Именно это отвязывает Bluetooth от основного loop() -
-    // см. комментарий в BleTelemetry.h.
+    // Очередь пакетов на отправку + отдельная задача, которая их реально шлёт
+    // через notify(). Именно это отвязывает Bluetooth от основного loop().
     _queue = xQueueCreate(QUEUE_LENGTH, sizeof(QueueItem));
     xTaskCreatePinnedToCore(
         &BleTelemetry::taskEntry,
@@ -103,21 +100,27 @@ void BleTelemetry::update() {
 
 void BleTelemetry::send(const char* text) {
     // Дешёвая проверка до похода в очередь: нет клиента - нет смысла
-    // копировать и класть строку.
+    // копировать и класть пакет.
     if (!_connected || _queue == nullptr || text == nullptr) {
         return;
     }
 
     QueueItem item;
     size_t len = strlen(text);
-    if (len >= MAX_LINE_LEN) {
-        len = MAX_LINE_LEN - 1; // обрезаем, а не блокируемся и не выделяем память
+    if (len >= MAX_ITEM_LEN) {
+        // Не помещается целиком - режем по последнему '\n', чтобы не
+        // отправить оборванную строку.
+        size_t cut = MAX_ITEM_LEN - 1;
+        while (cut > 0 && text[cut - 1] != '\n') {
+            cut--;
+        }
+        len = (cut > 0) ? cut : (MAX_ITEM_LEN - 1);
     }
     memcpy(item.data, text, len);
     item.data[len] = '\0';
     item.len = len;
 
-    // Таймаут 0: если очередь занята/полна - строка тихо теряется, но
+    // Таймаут 0: если очередь занята/полна - пакет тихо теряется, но
     // loop() ни при каких обстоятельствах не ждёт.
     xQueueSend(_queue, &item, 0);
 }
@@ -144,7 +147,7 @@ void BleTelemetry::taskLoop() {
             continue;
         }
         if (!_connected || _txCharacteristic == nullptr) {
-            continue; // клиент отключился, пока строка ждала в очереди
+            continue; // клиент отключился, пока пакет ждал в очереди
         }
 
         size_t offset = 0;
@@ -156,6 +159,11 @@ void BleTelemetry::taskLoop() {
             _txCharacteristic->setValue((uint8_t*)(item.data + offset), chunkLen);
             _txCharacteristic->notify();
             offset += chunkLen;
+            if (offset < item.len) {
+                // Небольшая пауза между кусками одного пакета, чтобы BLE-стек
+                // не сбрасывал notify при нехватке буферов.
+                vTaskDelay(pdMS_TO_TICKS(BLE_CHUNK_GAP_MS));
+            }
         }
     }
 }
