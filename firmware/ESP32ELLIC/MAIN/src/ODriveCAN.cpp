@@ -51,7 +51,8 @@ ODriveCAN::ODriveCAN()
     : _telemetry(nullptr),
       _driverInstalled(false),
       _recoveryRequested(false),
-      _lastBusPollMs(0) {
+      _lastBusPollMs(0),
+      _lastUpdateMs(0) {
     memset(&_bus, 0, sizeof(_bus));
     initChannel(_right, RIGHT_ODRIVE_NODE_ID, "RIGHT");
     initChannel(_left, LEFT_ODRIVE_NODE_ID, "LEFT");
@@ -235,7 +236,20 @@ void ODriveCAN::refreshOnlineState(uint32_t nowMs) {
 // запускаем восстановление; когда оно закончилось (STOPPED) - стартуем снова.
 // Раньше такого обработчика не было: после bus-off приём и передача могли
 // молчать до перезапуска ESP.
-void ODriveCAN::pollBusStatus(uint32_t nowMs) {
+void ODriveCAN::invalidatePositions(uint32_t nowMs) {
+    if (_driverInstalled) {
+        twai_clear_receive_queue();
+    }
+    WheelChannel* channels[2] = { &_right, &_left };
+    for (WheelChannel* chPtr : channels) {
+        chPtr->hasValidPosition = false;
+        // Пауза была у нас, а не у ODrive: не считаем её потерей связи с узлом.
+        chPtr->lastFrameMs = nowMs;
+    }
+    _bus.posInvalidations++;
+}
+
+void ODriveCAN::pollBusStatus(uint32_t nowMs, bool skipMissedCheck) {
     if (!_driverInstalled) {
         return;
     }
@@ -248,6 +262,10 @@ void ODriveCAN::pollBusStatus(uint32_t nowMs) {
     if (twai_get_status_info(&st) != ESP_OK) {
         return;
     }
+
+    // Очередь переполнялась сама по себе (без паузы loop(), которую поймал
+    // update()): новейшие кадры потеряны, позиции в кэше могут быть старыми.
+    bool missedGrew = (st.rx_missed_count != _bus.rxMissed);
 
     _bus.state = (uint8_t)st.state;
     _bus.txErrCounter = st.tx_error_counter;
@@ -271,9 +289,22 @@ void ODriveCAN::pollBusStatus(uint32_t nowMs) {
     } else if (st.state == TWAI_STATE_RUNNING) {
         _recoveryRequested = false;
     }
+
+    if (missedGrew && !skipMissedCheck) {
+        invalidatePositions(nowMs);
+    }
 }
 
 void ODriveCAN::update() {
+    uint32_t nowStart = millis();
+    bool guardFired = false;
+    if (_lastUpdateMs != 0 && (nowStart - _lastUpdateMs) > CAN_STALL_GUARD_MS) {
+        // loop() простоял: смотри комментарий к CAN_STALL_GUARD_MS.
+        invalidatePositions(nowStart);
+        guardFired = true;
+    }
+    _lastUpdateMs = nowStart;
+
     if (_driverInstalled) {
         twai_message_t msg;
         // Раздел 12.1/12.5: приём всех доступных кадров без блокировки.
@@ -285,7 +316,7 @@ void ODriveCAN::update() {
     }
     uint32_t now = millis();
     refreshOnlineState(now);
-    pollBusStatus(now);
+    pollBusStatus(now, guardFired);
 }
 
 bool ODriveCAN::moveWheelInternal(WheelChannel &ch, float delta) {

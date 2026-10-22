@@ -89,7 +89,10 @@ private:
     // frameData должен указывать минимум на dlc байт полезной нагрузки кадра.
     void processFrame(uint32_t canId, const uint8_t* frameData, uint8_t dlc, uint32_t nowMs);
     void refreshOnlineState(uint32_t nowMs);
-    void pollBusStatus(uint32_t nowMs);
+    void pollBusStatus(uint32_t nowMs, bool skipMissedCheck);
+    // Сбрасывает очередь приёма и делает позиции колёс недействительными до
+    // следующего кадра 0x09 (раздел 12.3 спецификации).
+    void invalidatePositions(uint32_t nowMs);
 
     bool moveWheelInternal(WheelChannel &ch, float delta);
     OdriveSnapshot snapshotFrom(const WheelChannel &ch) const;
@@ -101,5 +104,6 @@ private:
     bool     _driverInstalled;
     bool     _recoveryRequested;
     uint32_t _lastBusPollMs;
+    uint32_t _lastUpdateMs;
     CanBusSnapshot _bus;
 };

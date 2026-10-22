@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // Версия прошивки (печатается при старте в Serial строкой "# ...").
-#define FW_VERSION "v3.1"
+#define FW_VERSION "v3.2"
 
 // =======================================================================
 // Аппаратные подключения (раздел 4 спецификации)
@@ -53,6 +53,14 @@ static const float    RIGHT_WHEEL_SIGN       = -1.0f;
 // в секунду). Вал на 10 мс проходит единицы градусов, до порога 180° далеко.
 static const uint32_t ENCODER_PERIOD_MS      = 10;
 
+// Если от последнего успешного чтения AS5600 прошло больше этого времени,
+// первое успешное чтение только перепривязывает точку отсчёта (дельта не
+// считается): что вал делал за это время, неизвестно. Раздел 6.3 спецификации.
+static const uint32_t ENCODER_RESYNC_MS      = 100;
+
+// Таймаут транзакции I2C (мс) для Wire.setTimeOut().
+static const uint32_t AS5600_I2C_TIMEOUT_MS  = 20;
+
 // Период сбора и печати пакета M/L/R/E/D/C. 200 мс (5 Гц) - как в исходном
 // ТЗ телеметрии; при 100 мс BLE не успевал отправлять (теряло ~40% строк).
 static const uint32_t TELEMETRY_PERIOD_MS    = 200;
@@ -84,6 +92,13 @@ static const uint32_t TWAI_RX_QUEUE_LEN      = 64;
 static const uint32_t TWAI_TX_QUEUE_LEN      = 16;
 static const uint32_t CAN_STATUS_POLL_MS     = 50;     // опрос состояния TWAI (bus-off и счётчики)
 
+// Если между двумя вызовами ODriveCAN::update() прошло больше этого времени,
+// loop() простоял: очередь приёма могла переполниться и потерять САМЫЕ НОВЫЕ
+// кадры, а самые старые были бы приняты как свежие. Тогда очередь сбрасывается,
+// а позиции колёс считаются недействительными до следующего кадра 0x09.
+// Ёмкость очереди ~460 мс (140 кадров/с, 64 кадра), порог взят с запасом.
+static const uint32_t CAN_STALL_GUARD_MS     = 350;
+
 // CAN node_id (раздел 4, 10.3)
 static const uint8_t RIGHT_ODRIVE_NODE_ID = 1;
 static const uint8_t LEFT_ODRIVE_NODE_ID  = 2;
@@ -105,6 +120,7 @@ struct EncoderSnapshot {
     float lastDelta;       // последняя дельта, посчитанная в Encoder::update()
     uint32_t readErrors;   // накопительно: неудачные чтения AS5600
     uint32_t readMaxUs;    // макс. длительность чтения AS5600 за период телеметрии, мкс
+    uint32_t busRecoveries; // накопительно: восстановления шины I2C после ошибок чтения
 };
 
 struct FireSnapshot {
@@ -163,6 +179,7 @@ struct CanBusSnapshot {
     uint32_t busError;
     uint32_t txFailedHw;        // отправка не удалась на уровне контроллера
     uint32_t busOffRecoveries;  // сколько раз запускалось восстановление после bus-off
+    uint32_t posInvalidations;  // сколько раз позиции колёс сбрасывались после паузы loop()/потери кадров
 };
 
 struct TelemetrySample {

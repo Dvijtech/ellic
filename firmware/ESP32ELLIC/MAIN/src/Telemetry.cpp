@@ -50,6 +50,7 @@ Telemetry::Telemetry(Encoder* encoder, MotionController* motion, ODriveCAN* odri
       _fire(nullptr),
       _lastMs(0),
       _prevAs5600(0),
+      _prevAsRecov(0),
       _loopGapMaxUs(0),
       _lastSendUs(0),
       _resetReason(0),
@@ -215,12 +216,15 @@ void Telemetry::sendPacket(uint32_t ts) {
                   (unsigned long)(cr.ctrlErr - _prevRight.ctrlErr));
 
     // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,
-    //   twaiState,tec,rec,rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR
+    //   twaiState,tec,rec,rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR,
+    //   canStalls,asRecov
     // uptimeS/reset/boots/prevUptimeS/twaiState/tec/rec - текущие значения;
     // loopGapMaxUs/sendUs/asReadMaxUs/ageL/ageR - максимумы за период;
-    // rxMissed/arbLost/busError/txFailedHw/busOffRecov - число событий за период.
+    // rxMissed/arbLost/busError/txFailedHw/busOffRecov - число событий за период;
+    // canStalls - сколько раз позиции колёс сбрасывались после паузы loop() или
+    // потери кадров; asRecov - сколько раз восстанавливалась шина I2C (за период).
     pos = appendf(pkt, sizeof(pkt), pos,
-                  "D,%lu,%lu,%d,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+                  "D,%lu,%lu,%d,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
                   (unsigned long)ts,
                   (unsigned long)(ts / 1000UL),
                   _resetReason,
@@ -238,7 +242,9 @@ void Telemetry::sendPacket(uint32_t ts) {
                   (unsigned long)(bus.txFailedHw - _prevBus.txFailedHw),
                   (unsigned long)(bus.busOffRecoveries - _prevBus.busOffRecoveries),
                   (unsigned long)l.posAgeMaxMs,
-                  (unsigned long)r.posAgeMaxMs);
+                  (unsigned long)r.posAgeMaxMs,
+                  (unsigned long)(bus.posInvalidations - _prevBus.posInvalidations),
+                  (unsigned long)(enc.busRecoveries - _prevAsRecov));
 
     // C,ts,L[hb,motErr,encErr,est,iq,busVI,ctrlErr],R[то же]
     // Сколько кадров каждого типа принято за период (норма при rate_ms=100 и
@@ -250,6 +256,7 @@ void Telemetry::sendPacket(uint32_t ts) {
 
     // Запоминаем значения для расчёта событий за следующий период.
     _prevAs5600 = enc.readErrors;
+    _prevAsRecov = enc.busRecoveries;
     _prevLeft = cl;
     _prevRight = cr;
     _prevBus = bus;

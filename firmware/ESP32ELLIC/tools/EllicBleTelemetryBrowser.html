@@ -178,12 +178,17 @@ const D_ERR_FIELDS = [
   ['e_busOff', 'TWAI bus-off recoveries'],
 ];
 for (const [id, name] of D_ERR_FIELDS) def(id, name, G_E, 'cnt', { int: true });
+// Устойчивость (прошивка v3.2, в конце записи D): паузы loop() и зависания I2C
+def('e_stall', 'сбросов позиции колёс (пауза loop / потеря кадров)', G_E, 'cnt', { int: true });
+def('e_asRec', 'восстановлений шины I2C (AS5600)', G_E, 'cnt', { int: true });
 
 const ERR_CHARTS = [
   { title: 'вал и CAN', ids: ['e_as', 'e_Ltx', 'e_Rtx', 'e_Lstale', 'e_Rstale', 'e_Loff', 'e_Roff'],
     names: ['AS5600', 'L txFail', 'R txFail', 'L stale', 'R stale', 'L offline', 'R offline'] },
   { title: 'TWAI шина', ids: D_ERR_FIELDS.map(x => x[0]),
     names: ['rxMissed', 'arbLost', 'busError', 'txFailedHw', 'bus-off recov'] },
+  { title: 'устойчивость (v3.2)', ids: ['e_stall', 'e_asRec', 'e_as'],
+    names: ['сброс позиции', 'I2C восстановлений', 'AS5600 ошибок'] },
   { title: 'ODrive левый', ids: ['e_Laxis', 'e_Lmot', 'e_Lenc', 'e_Lctrl'],
     names: ['axis', 'motor', 'encoder', 'ctrl'] },
   { title: 'ODrive правый', ids: ['e_Raxis', 'e_Rmot', 'e_Renc', 'e_Rctrl'],
@@ -200,7 +205,9 @@ function num(s) { return (s === undefined || s === '') ? NaN : Number(s); }
 const HEX_RE = /^[0-9A-Fa-f]+$/;
 // D: порядок полей после type,ts
 const D_IDS = ['uptime', 'reset', 'boots', 'prevUp', 'loopGap', 'sendUs', 'asMax', 'twai', 'tec', 'rec',
-               'e_rxMiss', 'e_arb', 'e_busErr', 'e_txHw', 'e_busOff', 'ageL', 'ageR'];
+               'e_rxMiss', 'e_arb', 'e_busErr', 'e_txHw', 'e_busOff', 'ageL', 'ageR',
+               'e_stall', 'e_asRec'];
+const D_BASE = 17;   // число полей D в прошивках до v3.2 (без e_stall и e_asRec)
 
 function parseRecord(line) {
   const f = line.split(',');
@@ -253,9 +260,10 @@ function parseRecord(line) {
     }
   } else if (type === 'D') {
     // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,twaiState,tec,rec,
-    //   rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR
-    if (f.length !== 2 + D_IDS.length) return null;
-    for (let i = 0; i < D_IDS.length; i++) {
+    //   rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR[,canStalls,asRecov]
+    // (19 полей - прошивки до v3.2, 21 - с счётчиками устойчивости в конце)
+    if (f.length !== 2 + D_BASE && f.length !== 2 + D_IDS.length) return null;
+    for (let i = 0; i < f.length - 2; i++) {
       const x = num(f[2 + i]);
       if (!Number.isFinite(x)) return null;
       vals[D_IDS[i]] = x;
@@ -650,7 +658,7 @@ function makeDemo() {
     const age = stall ? 400 + Math.round(Math.random() * 300) : 40 + Math.round(Math.random() * 60);
     lines.push(['D', ts, Math.round(ts / 1000), 3, 2, 412, gap, 4800 + Math.round(Math.random() * 600),
                 1250 + Math.round(Math.random() * 120), 1, 0, 0,
-                stall ? 5 : 0, 0, stall ? 2 : 0, 0, 0, age, age].join(','));
+                stall ? 5 : 0, 0, stall ? 2 : 0, 0, 0, age, age, stall && k % 25 === 0 ? 1 : 0, k === 120 ? 1 : 0].join(','));
 
     // C,ts, L[hb,mot,enc,est,iq,vbus,ctrl], R[...] - по 2 кадра каждого типа за период 200 мс
     const full = [2, 2, 2, 2, 2, 2, 2], part = [2, 2, 2, 0, 0, 0, 2];

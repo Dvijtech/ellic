@@ -54,6 +54,7 @@ private:
 
     uint32_t _lastMs;
     uint32_t _prevAs5600;
+    uint32_t _prevAsRecov;
     WheelCounters _prevLeft;
     WheelCounters _prevRight;
 
