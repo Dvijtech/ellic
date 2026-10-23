@@ -144,6 +144,7 @@ def('prevUp',  'uptime пред. запуска, с',       G_SYS, 'num', { int:
 def('loopGap', 'loop: макс. интервал, мкс',     G_SYS, 'num', { int: true });
 def('sendUs',  'выдача пакета, мкс',            G_SYS, 'num', { int: true });
 def('asMax',   'AS5600 чтение макс, мкс',       G_SYS, 'num', { int: true });
+def('brkMax',  'тормоза: макс. отброшенный импульс, мс', G_SYS, 'num', { int: true });
 def('ageL',    'возраст позиции L макс, мс',    G_SYS, 'num', { int: true });
 def('ageR',    'возраст позиции R макс, мс',    G_SYS, 'num', { int: true });
 def('twai',    'TWAI состояние (0 стоп,1 раб,2 bus-off,3 восст.)', G_SYS, 'enum', { max: 3 });
@@ -167,7 +168,10 @@ const E_FIELDS = [
   ['e_Lmot',  'ERR L motor'],   ['e_Rmot',  'ERR R motor'],
   ['e_Lenc',  'ERR L encoder'], ['e_Renc',  'ERR R encoder'],
   ['e_Lctrl', 'ERR L ctrl'],    ['e_Rctrl', 'ERR R ctrl'],
+  // прошивка v3.3, в конце записи E:
+  ['e_brkL',  'ERR тормоз L: отброшено импульсов'], ['e_brkR', 'ERR тормоз R: отброшено импульсов'],
 ];
+const E_BASE = 15;   // число полей E в прошивках до v3.3
 for (const [id, name] of E_FIELDS) def(id, name, G_E, 'cnt', { int: true });
 // Счётчики событий TWAI за период - приходят в записи D
 const D_ERR_FIELDS = [
@@ -187,8 +191,8 @@ const ERR_CHARTS = [
     names: ['AS5600', 'L txFail', 'R txFail', 'L stale', 'R stale', 'L offline', 'R offline'] },
   { title: 'TWAI шина', ids: D_ERR_FIELDS.map(x => x[0]),
     names: ['rxMissed', 'arbLost', 'busError', 'txFailedHw', 'bus-off recov'] },
-  { title: 'устойчивость (v3.2)', ids: ['e_stall', 'e_asRec', 'e_as'],
-    names: ['сброс позиции', 'I2C восстановлений', 'AS5600 ошибок'] },
+  { title: 'устойчивость (v3.2)', ids: ['e_stall', 'e_asRec', 'e_as', 'e_brkL', 'e_brkR'],
+    names: ['сброс позиции', 'I2C восстановлений', 'AS5600 ошибок', 'тормоз L отброшено', 'тормоз R отброшено'] },
   { title: 'ODrive левый', ids: ['e_Laxis', 'e_Lmot', 'e_Lenc', 'e_Lctrl'],
     names: ['axis', 'motor', 'encoder', 'ctrl'] },
   { title: 'ODrive правый', ids: ['e_Raxis', 'e_Rmot', 'e_Renc', 'e_Rctrl'],
@@ -206,7 +210,7 @@ const HEX_RE = /^[0-9A-Fa-f]+$/;
 // D: порядок полей после type,ts
 const D_IDS = ['uptime', 'reset', 'boots', 'prevUp', 'loopGap', 'sendUs', 'asMax', 'twai', 'tec', 'rec',
                'e_rxMiss', 'e_arb', 'e_busErr', 'e_txHw', 'e_busOff', 'ageL', 'ageR',
-               'e_stall', 'e_asRec'];
+               'e_stall', 'e_asRec', 'brkMax'];
 const D_BASE = 17;   // число полей D в прошивках до v3.2 (без e_stall и e_asRec)
 
 function parseRecord(line) {
@@ -251,9 +255,9 @@ function parseRecord(line) {
     vals[s + '_tx'] = num(f[13]);
     vals[s + '_rx'] = num(f[14]);
   } else if (type === 'E') {
-    // E,ts + 15 счётчиков
-    if (f.length !== 2 + E_FIELDS.length) return null;
-    for (let i = 0; i < E_FIELDS.length; i++) {
+    // E,ts + 15 счётчиков [+ 2 счётчика отброшенных импульсов тормозов, прошивка v3.3]
+    if (f.length !== 2 + E_BASE && f.length !== 2 + E_FIELDS.length) return null;
+    for (let i = 0; i < f.length - 2; i++) {
       const x = num(f[2 + i]);
       if (!Number.isFinite(x)) return null;
       vals[E_FIELDS[i][0]] = x;
@@ -261,8 +265,8 @@ function parseRecord(line) {
   } else if (type === 'D') {
     // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,twaiState,tec,rec,
     //   rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR[,canStalls,asRecov]
-    // (19 полей - прошивки до v3.2, 21 - с счётчиками устойчивости в конце)
-    if (f.length !== 2 + D_BASE && f.length !== 2 + D_IDS.length) return null;
+    // (19 полей - прошивки до v3.2, 21 - v3.2 со счётчиками устойчивости, 22 - v3.3 + brkMax)
+    if (f.length !== 2 + D_BASE && f.length !== 2 + D_BASE + 2 && f.length !== 2 + D_IDS.length) return null;
     for (let i = 0; i < f.length - 2; i++) {
       const x = num(f[2 + i]);
       if (!Number.isFinite(x)) return null;
@@ -650,7 +654,8 @@ function makeDemo() {
       Lmot: 0, Rmot: 0, Lenc: 0, Renc: 0, Lctrl: 0, Rctrl: 0,
     };
     lines.push(['E', ts, e.as, e.Ltx, e.Rtx, e.Lstale, e.Rstale, e.Loff, e.Roff,
-                e.Laxis, e.Raxis, e.Lmot, e.Rmot, e.Lenc, e.Renc, e.Lctrl, e.Rctrl].join(','));
+                e.Laxis, e.Raxis, e.Lmot, e.Rmot, e.Lenc, e.Renc, e.Lctrl, e.Rctrl,
+                (k % 53 === 0 ? 1 : 0), (k % 71 === 0 ? 2 : 0)].join(','));
 
     // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,twaiState,tec,rec,
     //   rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR
@@ -658,7 +663,8 @@ function makeDemo() {
     const age = stall ? 400 + Math.round(Math.random() * 300) : 40 + Math.round(Math.random() * 60);
     lines.push(['D', ts, Math.round(ts / 1000), 3, 2, 412, gap, 4800 + Math.round(Math.random() * 600),
                 1250 + Math.round(Math.random() * 120), 1, 0, 0,
-                stall ? 5 : 0, 0, stall ? 2 : 0, 0, 0, age, age, stall && k % 25 === 0 ? 1 : 0, k === 120 ? 1 : 0].join(','));
+                stall ? 5 : 0, 0, stall ? 2 : 0, 0, 0, age, age, stall && k % 25 === 0 ? 1 : 0, k === 120 ? 1 : 0,
+                (k % 53 === 0 || k % 71 === 0) ? 8 : 0].join(','));
 
     // C,ts, L[hb,mot,enc,est,iq,vbus,ctrl], R[...] - по 2 кадра каждого типа за период 200 мс
     const full = [2, 2, 2, 2, 2, 2, 2], part = [2, 2, 2, 0, 0, 0, 2];
@@ -702,7 +708,7 @@ const SECTIONS = [
   ['Кадры за период (tx / rx)', ['R_rx', 'L_rx', 'R_tx', 'L_tx']],
   ['Состояние ODrive',          ['R_online', 'L_online', 'R_state', 'L_state', 'R_traj', 'L_traj']],
   ['Коды ошибок ODrive',        ['R_axisErr', 'L_axisErr', 'R_motorErr', 'L_motorErr', 'R_encErr', 'L_encErr', 'R_ctrlErr', 'L_ctrlErr']],
-  [G_SYS,                       ['uptime', 'reset', 'boots', 'prevUp', 'loopGap', 'sendUs', 'asMax', 'ageR', 'ageL', 'twai', 'tec', 'rec']],
+  [G_SYS,                       ['uptime', 'reset', 'boots', 'prevUp', 'loopGap', 'sendUs', 'asMax', 'brkMax', 'ageR', 'ageL', 'twai', 'tec', 'rec']],
 ];
 const _covered = new Set();
 function addVarItem(v) { addItem({ key: v.id, type: v.kind === 'num' ? 'line' : 'lane', v, h: v.kind === 'num' ? H_LINE : H_LANE }); }

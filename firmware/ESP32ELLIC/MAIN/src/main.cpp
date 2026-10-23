@@ -7,6 +7,7 @@
 #include "Telemetry.h"
 #include "BleTelemetry.h"
 #include "FireButton.h"
+#include "BrakeInputs.h"
 // #include "EllicVRButton.h"
 // ВАЖНО: EllicVRButton (BleGamepad) и BleTelemetry - оба поднимают BLE-стек
 // на ESP32. Пока EllicVRButton закомментирован, конфликта нет. Если его
@@ -23,6 +24,7 @@ ODriveCAN odriveCAN;
 Telemetry telemetry(&encoder, &motionController, &odriveCAN);
 BleTelemetry bleTelemetry;
 FireButton fireButton;
+BrakeInputs brakeInputs;
 
 // EllicVRButton vrButton("ELLIC VR Gamepad", 18);
 
@@ -36,10 +38,10 @@ void setup() {
     Wire.begin(AS5600_SDA_PIN, AS5600_SCL_PIN);
     Wire.setClock(AS5600_I2C_CLOCK_HZ);
 
-    pinMode(LEFT_BRAKE_PIN, INPUT_PULLUP);
-    pinMode(RIGHT_BRAKE_PIN, INPUT_PULLUP);
-
     telemetry.begin();
+
+    brakeInputs.begin();   // пины тормозов (INPUT_PULLUP) настраиваются здесь
+    telemetry.setBrakeInputs(&brakeInputs);
 
     fireButton.begin();
     telemetry.setFireButton(&fireButton);
@@ -70,6 +72,9 @@ void loop() {
     }
     prevLoopStartUs = loopStartUs;
 
+    // Тормоза: фильтр опрашивается на каждом проходе loop() (раздел 8).
+    brakeInputs.update();
+
     // Кнопка стрельбы (раздел 13.2): состояние и счётчик уходят в периодическом
     // пакете; немедленная выдача включается флагом FIRE_SEND_IMMEDIATE.
     bool fireChanged = fireButton.update();
@@ -96,8 +101,9 @@ void loop() {
     if (now - lastControlMs >= CONTROL_PERIOD_MS) {
         lastControlMs = now;
 
-        bool leftBrake  = (digitalRead(LEFT_BRAKE_PIN) == LOW);
-        bool rightBrake = (digitalRead(RIGHT_BRAKE_PIN) == LOW);
+        // Состояние тормозов после программного фильтра (BrakeInputs).
+        bool leftBrake  = brakeInputs.leftPressed();
+        bool rightBrake = brakeInputs.rightPressed();
 
         EncoderSnapshot encSnap = encoder.getSnapshot();
 

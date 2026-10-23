@@ -7,6 +7,7 @@ class MotionController;
 class ODriveCAN;
 class BleTelemetry;
 class FireButton;
+class BrakeInputs;
 
 // Telemetry: единственный модуль, отвечающий за вывод телеметрии (раздел 13).
 // Раз в TELEMETRY_PERIOD_MS собирает снапшоты и печатает ОДНИМ буфером пакет из
@@ -23,6 +24,9 @@ public:
 
     // Подключить кнопку стрельбы (поля fire / fire_count в конце записи M).
     void setFireButton(FireButton* fire);
+
+    // Подключить входы тормозов (счётчики отброшенных импульсов в E и D).
+    void setBrakeInputs(BrakeInputs* brakes);
 
     // Сразу, вне расписания, выдаёт одну строку M с текущим состоянием кнопки.
     // Вызывать при изменении состояния кнопки (раздел 13.2 спецификации).
@@ -51,10 +55,13 @@ private:
     ODriveCAN* _odriveCAN;
     BleTelemetry* _ble;
     FireButton* _fire;
+    BrakeInputs* _brakes;
 
     uint32_t _lastMs;
     uint32_t _prevAs5600;
     uint32_t _prevAsRecov;
+    uint32_t _prevBrakeL;
+    uint32_t _prevBrakeR;
     WheelCounters _prevLeft;
     WheelCounters _prevRight;
 

@@ -4,6 +4,7 @@
 #include "ODriveCAN.h"
 #include "BleTelemetry.h"
 #include "FireButton.h"
+#include "BrakeInputs.h"
 #include <esp_system.h>
 #include <esp_attr.h>
 #include <stdarg.h>
@@ -48,9 +49,12 @@ Telemetry::Telemetry(Encoder* encoder, MotionController* motion, ODriveCAN* odri
       _odriveCAN(odriveCAN),
       _ble(nullptr),
       _fire(nullptr),
+      _brakes(nullptr),
       _lastMs(0),
       _prevAs5600(0),
       _prevAsRecov(0),
+      _prevBrakeL(0),
+      _prevBrakeR(0),
       _loopGapMaxUs(0),
       _lastSendUs(0),
       _resetReason(0),
@@ -69,6 +73,10 @@ void Telemetry::setBleTelemetry(BleTelemetry* ble) {
 
 void Telemetry::setFireButton(FireButton* fire) {
     _fire = fire;
+}
+
+void Telemetry::setBrakeInputs(BrakeInputs* brakes) {
+    _brakes = brakes;
 }
 
 void Telemetry::begin() {
@@ -187,17 +195,23 @@ void Telemetry::sendPacket(uint32_t ts) {
     if (_fire != nullptr) {
         fs = _fire->getSnapshot();
     }
+    BrakeSnapshot bs = { false, false, 0, 0, 0 };
+    if (_brakes != nullptr) {
+        bs = _brakes->getSnapshot();
+    }
     pos = appendMotion(pkt, sizeof(pkt), pos, ts, enc, mo, fs);
 
     pos = appendWheel(pkt, sizeof(pkt), pos, 'L', ts, l, cl.tx - _prevLeft.tx, cl.rx - _prevLeft.rx);
     pos = appendWheel(pkt, sizeof(pkt), pos, 'R', ts, r, cr.tx - _prevRight.tx, cr.rx - _prevRight.rx);
 
     // E,ts,as5600,lTxFail,rTxFail,lStale,rStale,lOffline,rOffline,
-    //   lAxisErr,rAxisErr,lMotErr,rMotErr,lEncErr,rEncErr,lCtrlErr,rCtrlErr
-    // Значения - число событий с прошлой выдачи (разность uint32 корректна
+    //   lAxisErr,rAxisErr,lMotErr,rMotErr,lEncErr,rEncErr,lCtrlErr,rCtrlErr,
+    //   lBrakeGlitch,rBrakeGlitch
+    // lBrakeGlitch/rBrakeGlitch - импульсы на входе тормоза, отброшенные фильтром
+    // (короче BRAKE_DEBOUNCE_MS), за период. Значения - число событий с прошлой выдачи (разность uint32 корректна
     // и при переполнении счётчика).
     pos = appendf(pkt, sizeof(pkt), pos,
-                  "E,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+                  "E,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
                   (unsigned long)ts,
                   (unsigned long)(enc.readErrors - _prevAs5600),
                   (unsigned long)(cl.txFail - _prevLeft.txFail),
@@ -213,18 +227,20 @@ void Telemetry::sendPacket(uint32_t ts) {
                   (unsigned long)(cl.encErr - _prevLeft.encErr),
                   (unsigned long)(cr.encErr - _prevRight.encErr),
                   (unsigned long)(cl.ctrlErr - _prevLeft.ctrlErr),
-                  (unsigned long)(cr.ctrlErr - _prevRight.ctrlErr));
+                  (unsigned long)(cr.ctrlErr - _prevRight.ctrlErr),
+                  (unsigned long)(bs.leftGlitches - _prevBrakeL),
+                  (unsigned long)(bs.rightGlitches - _prevBrakeR));
 
     // D,ts,uptimeS,reset,boots,prevUptimeS,loopGapMaxUs,sendUs,asReadMaxUs,
     //   twaiState,tec,rec,rxMissed,arbLost,busError,txFailedHw,busOffRecov,ageL,ageR,
-    //   canStalls,asRecov
+    //   canStalls,asRecov,brakeGlitchMaxMs
     // uptimeS/reset/boots/prevUptimeS/twaiState/tec/rec - текущие значения;
     // loopGapMaxUs/sendUs/asReadMaxUs/ageL/ageR - максимумы за период;
     // rxMissed/arbLost/busError/txFailedHw/busOffRecov - число событий за период;
     // canStalls - сколько раз позиции колёс сбрасывались после паузы loop() или
     // потери кадров; asRecov - сколько раз восстанавливалась шина I2C (за период).
     pos = appendf(pkt, sizeof(pkt), pos,
-                  "D,%lu,%lu,%d,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+                  "D,%lu,%lu,%d,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
                   (unsigned long)ts,
                   (unsigned long)(ts / 1000UL),
                   _resetReason,
@@ -244,7 +260,8 @@ void Telemetry::sendPacket(uint32_t ts) {
                   (unsigned long)l.posAgeMaxMs,
                   (unsigned long)r.posAgeMaxMs,
                   (unsigned long)(bus.posInvalidations - _prevBus.posInvalidations),
-                  (unsigned long)(enc.busRecoveries - _prevAsRecov));
+                  (unsigned long)(enc.busRecoveries - _prevAsRecov),
+                  (unsigned long)bs.glitchMaxMs);
 
     // C,ts,L[hb,motErr,encErr,est,iq,busVI,ctrlErr],R[то же]
     // Сколько кадров каждого типа принято за период (норма при rate_ms=100 и
@@ -257,6 +274,8 @@ void Telemetry::sendPacket(uint32_t ts) {
     // Запоминаем значения для расчёта событий за следующий период.
     _prevAs5600 = enc.readErrors;
     _prevAsRecov = enc.busRecoveries;
+    _prevBrakeL = bs.leftGlitches;
+    _prevBrakeR = bs.rightGlitches;
     _prevLeft = cl;
     _prevRight = cr;
     _prevBus = bus;
@@ -269,6 +288,9 @@ void Telemetry::sendPacket(uint32_t ts) {
     _loopGapMaxUs = 0;
     _encoder->resetPeriodStats();
     _odriveCAN->resetPeriodStats();
+    if (_brakes != nullptr) {
+        _brakes->resetPeriodStats();
+    }
 }
 
 // Немедленная выдача при изменении состояния кнопки: одна строка M (~80 байт)
