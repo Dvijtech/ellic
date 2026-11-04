@@ -1,11 +1,12 @@
 #pragma once
 #include <Arduino.h>
 #include "Config.h"
+#include "InputFilter.h"
 
 // FireButton: кнопка стрельбы (раздел 4, 13 спецификации).
-// Вход FIRE_BUTTON_PIN с INPUT_PULLUP, кнопка нажата при LOW. Антидребезг:
-// новое состояние принимается, когда сигнал не менялся не менее
-// FIRE_DEBOUNCE_MS. Считает нажатия по фронту (отпускание не считается).
+// Вход FIRE_BUTTON_PIN с INPUT_PULLUP, кнопка нажата при LOW. v3.4: фильтр
+// интегрирующий (InputFilter, порог FIRE_DEBOUNCE_MS), как у тормозов.
+// Считает нажатия по фронту (отпускание не считается).
 // Модуль ничего не отправляет и не управляет моторами: о смене состояния
 // сообщает возвращаемым значением update(), а данные отдаёт через getSnapshot().
 class FireButton {
@@ -17,14 +18,12 @@ public:
     void begin();
 
     // Вызывать в каждом проходе loop(). Возвращает true в тот проход, в
-    // который дебаунснутое состояние изменилось (нажатие или отпускание).
+    // который принятое состояние изменилось (нажатие или отпускание).
     bool update();
 
     FireSnapshot getSnapshot() const;
 
 private:
-    bool     _pressed;        // дебаунснутое состояние
-    bool     _lastRaw;        // последнее сырое значение пина
-    uint32_t _rawChangedMs;   // когда сырое значение менялось в последний раз
-    uint32_t _pressCount;
+    InputFilter _filter;
+    uint32_t    _pressCount;
 };

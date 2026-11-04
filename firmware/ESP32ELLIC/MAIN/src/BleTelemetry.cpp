@@ -120,9 +120,14 @@ void BleTelemetry::send(const char* text) {
     item.data[len] = '\0';
     item.len = len;
 
-    // Таймаут 0: если очередь занята/полна - пакет тихо теряется, но
-    // loop() ни при каких обстоятельствах не ждёт.
-    xQueueSend(_queue, &item, 0);
+    // Таймаут 0: loop() ни при каких обстоятельствах не ждёт. Если очередь
+    // полна, выбрасываем САМЫЙ СТАРЫЙ пакет, а не новый: в браузер должны
+    // доезжать свежие данные, а не пакеты секундной давности.
+    if (xQueueSend(_queue, &item, 0) != pdTRUE) {
+        QueueItem dropped;
+        xQueueReceive(_queue, &dropped, 0);
+        xQueueSend(_queue, &item, 0);
+    }
 }
 
 void BleTelemetry::handleConnect() {

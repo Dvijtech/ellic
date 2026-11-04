@@ -61,7 +61,7 @@ private:
                                                 // если заметите потери notify на
                                                 // конкретном железе - уменьшите
     static const uint32_t BLE_CHUNK_GAP_MS = 5; // пауза между notify одного пакета
-    static const int QUEUE_LENGTH = 6;          // ~1.2 с запаса при периоде 200 мс
+    static const int QUEUE_LENGTH = 3;          // ~0.6 с запаса при периоде 200 мс
 
     struct QueueItem {
         char data[MAX_ITEM_LEN];
